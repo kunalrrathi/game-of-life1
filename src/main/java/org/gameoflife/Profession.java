@@ -1,0 +1,22 @@
+package org.gameoflife;
+
+public enum Profession {
+
+    BUSINESS(12000),
+    DOCTOR(5000),
+    LAWYER(50000),
+    JOURNALIST(24000),
+    TEACHER(20000),
+    PHYSICIST(30000),
+    NONE(0);   // for before selection
+
+    private final int salary;
+
+    Profession(int salary) {
+        this.salary = salary;
+    }
+
+    public int getSalary() {
+        return salary;
+    }
+}
