@@ -19,6 +19,16 @@ public class Player {
     private static final int LOAN_AMOUNT = 20000;
     private static final int INTEREST_PER_NOTE = 1000;
 
+    private boolean retired = false;
+
+    public boolean isRetired() {
+        return retired;
+    }
+
+    public void setRetired(boolean retired) {
+        this.retired = retired;
+    }
+
     public void setProfession(Profession profession) {
         this.profession = profession;
         this.salary = profession.getSalary();
@@ -103,6 +113,9 @@ public class Player {
     }
 
     public void payInterest() {
+
+        if (retired) return;
+
         int totalInterest = promissoryNotes * INTEREST_PER_NOTE;
 
         if (totalInterest > 0) {
@@ -145,5 +158,25 @@ public class Player {
         System.out.println("Repaid loan: " + LOAN_AMOUNT +
                 " | Remaining Notes: " + promissoryNotes +
                 " | Cash: " + cash);
+    }
+
+    public void settleLoansAtRetirement() {
+
+        if (promissoryNotes == 0) {
+            System.out.println("No loans to settle at retirement.");
+            return;
+        }
+
+        int totalDue = promissoryNotes * LOAN_AMOUNT;
+
+        System.out.println("Retirement settlement required: " + totalDue);
+
+        // Ensure enough cash
+        ensureCashAvailable(totalDue);
+
+        cash -= totalDue;
+        promissoryNotes = 0;
+
+        System.out.println("All loans cleared at retirement. Cash: " + cash);
     }
 }

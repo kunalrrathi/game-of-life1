@@ -28,8 +28,8 @@ public class Board {
         double startX = 50;
         double startY = 50;
 
-        int width = 8;
-        int height = 8;
+        int width = 10;
+        int height = 10;
 
         for (int row = 0; row < height; row++) {
 
@@ -52,13 +52,13 @@ public class Board {
                     type = SpaceType.PAYDAY;
                 } else if (index == 15) {
                     type = SpaceType.MARRIAGE;
-                } else if (index == 40) {
+                } else if (index == 95) {
                     type = SpaceType.RETIRE;
                 } else {
                     type = SpaceType.NORMAL;
                 }
 
-                boolean isStop = (type == SpaceType.MARRIAGE);
+                boolean isStop = (type == SpaceType.MARRIAGE) || (type == SpaceType.RETIRE);
 
                 Integer branch = null;
 
@@ -83,11 +83,11 @@ public class Board {
             circle.setCenterY(space.getY());
 
             switch (space.getType()) {
-                case START -> circle.setFill(Color.LIGHTGREEN);
-                case PAYDAY -> circle.setFill(Color.LIGHTBLUE);
+                case START -> circle.setFill(Color.WHITE);
+                case PAYDAY -> circle.setFill(Color.RED);
                 case MARRIAGE -> circle.setFill(Color.ORANGE);
-                case RETIRE -> circle.setFill(Color.GOLD);
-                default -> circle.setFill(Color.BEIGE);
+                case RETIRE -> circle.setFill(Color.YELLOW);
+                default -> circle.setFill(Color.LIGHTYELLOW);
             }
 
             circle.setStroke(Color.BLACK);

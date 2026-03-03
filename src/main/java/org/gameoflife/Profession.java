@@ -3,7 +3,7 @@ package org.gameoflife;
 public enum Profession {
 
     BUSINESS(12000),
-    DOCTOR(5000),
+    DOCTOR(50000),
     LAWYER(50000),
     JOURNALIST(24000),
     TEACHER(20000),
