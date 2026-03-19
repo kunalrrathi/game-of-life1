@@ -1,10 +1,10 @@
 package org.gameoflife;
 
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class Player {
 
+    private String name;
     private Profession profession = Profession.NONE;
     private int salary = 0;
     private boolean universityRoute = false;
@@ -12,7 +12,7 @@ public class Player {
     private int position = 0;
     private Circle token;
 
-    private int cash = 1000;   // starting money
+    private int cash;   // starting money
 
     private int promissoryNotes = 0;
 
@@ -20,6 +20,14 @@ public class Player {
     private static final int INTEREST_PER_NOTE = 1000;
 
     private boolean retired = false;
+
+    private boolean autoInsurance;
+    private boolean fireInsurance;
+    private boolean stockInsurance;
+    private boolean lifeInsurance;
+
+    private int children;
+    private boolean married;
 
     public boolean isRetired() {
         return retired;
@@ -50,8 +58,8 @@ public class Player {
         return universityRoute;
     }
 
-    public Player(Color color) {
-        token = new Circle(20, color);
+    public Player() {
+        token = new Circle(20);
     }
 
     public int getPosition() {
@@ -131,10 +139,16 @@ public class Player {
         }
     }
 
+    // For paying money (e.g. taxes, fees) **********************************
     public void pay(int amount) {
         ensureCashAvailable(amount);
         cash -= amount;
         System.out.println("Paid: " + amount + " | Remaining Cash: " + cash);
+    }
+
+    // For collecting money (e.g. salary, collect cards) **********************************
+    public void collect(int amount) {
+        cash += amount;
     }
 
     public boolean canRepayLoan() {
@@ -179,4 +193,22 @@ public class Player {
 
         System.out.println("All loans cleared at retirement. Cash: " + cash);
     }
+
+    public Player(String name) {
+        this.name = name;
+        this.cash = 10000;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean hasAutoInsurance() {
+        return autoInsurance;
+    }
+
+    public void setAutoInsurance(boolean autoInsurance) {
+        this.autoInsurance = autoInsurance;
+    }
+
 }

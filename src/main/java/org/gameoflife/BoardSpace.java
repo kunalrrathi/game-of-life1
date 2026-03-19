@@ -1,0 +1,94 @@
+package org.gameoflife;
+
+public class BoardSpace {
+
+    private int index;
+
+    private double x;
+    private double y;
+
+    private String color;
+    private String action;
+
+    private int amount;
+
+    private String path;
+
+    private Integer next;
+    private Integer branch;
+
+    public BoardSpace(
+            int index,
+            double x,
+            double y,
+            String color,
+            String action,
+            int amount,
+            String path,
+            Integer next,
+            Integer branch
+    ) {
+        this.index = index;
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.action = action;
+        this.amount = amount;
+        this.path = path;
+        this.next = next;
+        this.branch = branch;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public int getAmount() {
+        return amount;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public Integer getNext() {
+        return next;
+    }
+
+    public Integer getBranch() {
+        return branch;
+    }
+
+    public boolean isRedSpace() {
+        return "Red".equalsIgnoreCase(color);
+    }
+
+    public boolean hasBranch() {
+        return branch != null;
+    }
+
+    public boolean isSplit() {
+        return "Split".equalsIgnoreCase(path);
+    }
+
+    public boolean isMerge() {
+        return "Merge".equalsIgnoreCase(path);
+    }
+
+}

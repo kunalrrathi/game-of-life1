@@ -1,110 +1,111 @@
 package org.gameoflife;
 
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Board {
 
-    private Pane boardPane;
-    private List<Space> path;
+    private List<BoardSpace> spaces;
 
-    private final int tileSpacing = 70;
+    private Pane boardPane;
+
+    private List<PlayerToken> tokens = new ArrayList<>();
 
     public Board() {
+
         boardPane = new Pane();
-        path = new ArrayList<>();
 
-        createPath();
-        drawPath();
+        // Load board spaces from CSV
+        spaces = BoardLoader.loadBoard("src/main/resources/org/gameoflife/BoardGame-GOL.csv");
+
+        drawBoard();
     }
 
-    private void createPath() {
+    private void drawBoard() {
 
-        int index = 0;
-        double startX = 50;
-        double startY = 50;
+        // Background image
+        ImageView boardImage = new ImageView(
+                new Image(getClass().getResource("/org/gameoflife/life_board.jpg").toExternalForm())
+        );
 
-        int width = 10;
-        int height = 10;
+        boardImage.setFitWidth(800);
+        boardImage.setPreserveRatio(true);
 
-        for (int row = 0; row < height; row++) {
+        boardPane.getChildren().add(boardImage);
 
-            for (int col = 0; col < width; col++) {
+        // Draw spaces (debug markers)
+        for (BoardSpace space : spaces) {
 
-                double x;
-                double y = startY + row * tileSpacing;
+            Circle marker = new Circle(15);
 
-                if (row % 2 == 0) {
-                    x = startX + col * tileSpacing;
-                } else {
-                    x = startX + (width - 1 - col) * tileSpacing;
-                }
+            marker.setLayoutX(space.getX());
+            marker.setLayoutY(space.getY());
 
-                SpaceType type;
+            marker.setFill(Color.YELLOW);
+            marker.setStroke(Color.BLACK);
 
-                if (index == 0) {
-                    type = SpaceType.START;
-                } else if (index % 10 == 0) {
-                    type = SpaceType.PAYDAY;
-                } else if (index == 15) {
-                    type = SpaceType.MARRIAGE;
-                } else if (index == 95) {
-                    type = SpaceType.RETIRE;
-                } else {
-                    type = SpaceType.NORMAL;
-                }
+            boardPane.getChildren().add(marker);
 
-                boolean isStop = (type == SpaceType.MARRIAGE) || (type == SpaceType.RETIRE);
-
-                Integer branch = null;
-
-                if (index == 0) {
-                    branch = 8; // college path starts at index 8
-                }
-
-                path.add(new Space(index, type, isStop, x, y, branch));
-
-                index++;
-            }
+            Text label = new Text(String.valueOf(space.getIndex()));
+            label.setLayoutX(space.getX() - 7);
+            label.setLayoutY(space.getY() + 5);
+            boardPane.getChildren().add(label);
         }
     }
 
-    private void drawPath() {
+    public void positionTokens(List<PlayerToken> tokens, int spaceIndex) {
 
-        for (Space space : path) {
+        BoardSpace space = spaces.get(spaceIndex);
 
-            Circle circle = new Circle(20);
+        double baseX = space.getX();
+        double baseY = space.getY();
 
-            circle.setCenterX(space.getX());
-            circle.setCenterY(space.getY());
+        double[][] offsets = {
+                {0,0},
+                {-10,-10},
+                {10,-10},
+                {-10,10},
+                {10,10},
+                {0,15}
+        };
 
-            switch (space.getType()) {
-                case START -> circle.setFill(Color.WHITE);
-                case PAYDAY -> circle.setFill(Color.RED);
-                case MARRIAGE -> circle.setFill(Color.ORANGE);
-                case RETIRE -> circle.setFill(Color.YELLOW);
-                default -> circle.setFill(Color.LIGHTYELLOW);
-            }
+        for(int i=0;i<tokens.size();i++){
 
-            circle.setStroke(Color.BLACK);
+            Circle node = tokens.get(i).getNode();
 
-            boardPane.getChildren().add(circle);
+            node.setLayoutX(baseX + offsets[i][0]);
+            node.setLayoutY(baseY + offsets[i][1]);
         }
-    }
-
-    public Space getSpace(int position) {
-        return path.get(position);
-    }
-
-    public int getPathSize() {
-        return path.size();
     }
 
     public Pane getBoardPane() {
         return boardPane;
     }
+
+    public BoardSpace getSpace(int index) {
+        return spaces.get(index);
+    }
+
+    public int getTotalSpaces() {
+        return spaces.size();
+    }
+
+    public List<BoardSpace> getSpaces() {
+        return spaces;
+    }
+
+    public void addToken(PlayerToken token) {
+
+        tokens.add(token);
+
+        boardPane.getChildren().add(token.getNode());
+    }
+
 }

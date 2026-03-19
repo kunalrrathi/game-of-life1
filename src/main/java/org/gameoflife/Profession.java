@@ -8,6 +8,7 @@ public enum Profession {
     JOURNALIST(24000),
     TEACHER(20000),
     PHYSICIST(30000),
+    UNIVERSITY_DEGREE(16000),
     NONE(0);   // for before selection
 
     private final int salary;
