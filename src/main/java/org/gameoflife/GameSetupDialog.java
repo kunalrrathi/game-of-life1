@@ -45,6 +45,7 @@ public class GameSetupDialog {
 
                     insuranceBox.getChildren().add(cb);
                 }
+                dialog.getDialogPane().getScene().getWindow().sizeToScene();
 
             } catch (Exception ignored) {}
 

@@ -17,6 +17,9 @@ public class BoardSpace {
     private Integer next;
     private Integer branch;
 
+    private String spaceType; // Main, Shortcut, Split, Merge
+    private int nextIndex;
+
     public BoardSpace(
             int index,
             double x,
@@ -24,8 +27,8 @@ public class BoardSpace {
             String color,
             String action,
             int amount,
-            String path,
-            Integer next,
+            String spaceType,
+            Integer nextIndex,
             Integer branch
     ) {
         this.index = index;
@@ -34,9 +37,9 @@ public class BoardSpace {
         this.color = color;
         this.action = action;
         this.amount = amount;
-        this.path = path;
-        this.next = next;
         this.branch = branch;
+        this.spaceType = spaceType;
+        this.nextIndex = nextIndex;
     }
 
     public int getIndex() {
@@ -63,14 +66,6 @@ public class BoardSpace {
         return amount;
     }
 
-    public String getPath() {
-        return path;
-    }
-
-    public Integer getNext() {
-        return next;
-    }
-
     public Integer getBranch() {
         return branch;
     }
@@ -89,6 +84,14 @@ public class BoardSpace {
 
     public boolean isMerge() {
         return "Merge".equalsIgnoreCase(path);
+    }
+
+    public String getSpaceType() {
+        return spaceType;
+    }
+
+    public int getNextIndex() {
+        return nextIndex;
     }
 
 }

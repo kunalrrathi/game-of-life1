@@ -83,4 +83,13 @@ public class PlayerCard {
     public VBox getCard() {
         return card;
     }
+
+    public void update(Player player) {
+
+        cashLabel.setText("Cash: $" + player.getCash());
+
+        // Add more later:
+        // insuranceLabel.setText(...)
+        // childrenLabel.setText(...)
+    }
 }

@@ -6,9 +6,14 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class Board {
 
@@ -17,6 +22,7 @@ public class Board {
     private Pane boardPane;
 
     private List<PlayerToken> tokens = new ArrayList<>();
+    private Timeline timeline;
 
     public Board() {
 
@@ -83,6 +89,8 @@ public class Board {
             node.setLayoutX(baseX + offsets[i][0]);
             node.setLayoutY(baseY + offsets[i][1]);
         }
+
+        System.out.println("Total spaces: " + spaces.size());
     }
 
     public Pane getBoardPane() {
@@ -106,6 +114,58 @@ public class Board {
         tokens.add(token);
 
         boardPane.getChildren().add(token.getNode());
+    }
+
+    public void stopAnimation() {
+        if (timeline != null) {
+            timeline.stop();
+        }
+    }
+
+    public void animateMovement(PlayerToken token, int steps, BiConsumer<BoardSpace, Integer> onStep, Runnable onFinished) {
+
+        timeline = new Timeline();
+
+        for (int i = 1; i <= steps; i++) {
+
+            int step = i;
+
+            KeyFrame frame = new KeyFrame(
+                    Duration.millis(300 * step),
+                    e -> {
+
+                        BoardSpace current = getSpace(token.getCurrentIndex());
+
+                        int nextIndex = current.getNextIndex();
+
+                        if (nextIndex >= spaces.size()) {
+                            nextIndex = spaces.size() - 1;
+                        }
+
+                        token.setCurrentIndex(nextIndex);
+
+                        BoardSpace space = spaces.get(nextIndex);
+
+                        token.getNode().setLayoutX(space.getX());
+                        token.getNode().setLayoutY(space.getY());
+
+                        int remainingSteps = steps - (step + 1);
+
+                        // 🔥 Notify controller at each step
+                        if (onStep != null) {
+                            onStep.accept(space, remainingSteps);
+                        }
+                    }
+            );
+
+            timeline.getKeyFrames().add(frame);
+        }
+
+        timeline.setOnFinished(e -> {
+            if (onFinished != null) onFinished.run();
+        });
+
+        timeline.play();
     }
 
 }

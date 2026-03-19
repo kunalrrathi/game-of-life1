@@ -32,6 +32,17 @@ public class PlayersDashboard {
         panel.getChildren().add(card.getCard());
     }
 
+    public void refresh(List<Player> players) {
+
+        for (int i = 0; i < players.size(); i++) {
+
+            Player player = players.get(i);
+            PlayerCard card = playerCards.get(i);
+
+            card.update(player);
+        }
+    }
+
     public VBox getPanel() {
         return panel;
     }
