@@ -148,7 +148,9 @@ public class Player {
 
     // For collecting money (e.g. salary, collect cards) **********************************
     public void collect(int amount) {
+        ensureCashAvailable(amount);
         cash += amount;
+        System.out.println("Collect: " + amount + " | Remaining Cash: " + cash);
     }
 
     public boolean canRepayLoan() {

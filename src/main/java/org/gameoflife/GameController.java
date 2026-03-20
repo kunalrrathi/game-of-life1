@@ -108,6 +108,10 @@ public class GameController {
                     steps,
                     (space, remainingSteps) -> {
 
+                        // ✅ PASS event (NOT landing)
+                        processStep(currentPlayer, space, false);
+
+                        // Existing SPLIT logic (keep as is)
                         if ("Split".equalsIgnoreCase(space.getSpaceType())) {
 
                             board.stopAnimation();
@@ -119,7 +123,7 @@ public class GameController {
                     },
                     () -> {
                         BoardSpace landed = board.getSpace(token.getCurrentIndex());
-                        handleLanding(currentPlayer, landed);
+                        processStep(currentPlayer, landed, true);
                         engine.nextTurn();
                         spinButton.setDisable(false);
                     }
@@ -131,49 +135,49 @@ public class GameController {
     // 🎯 LANDING LOGIC (CSV DRIVEN)
     // =========================================================
 
-    private void handleLanding(Player player, BoardSpace space) {
-
-
-
-        String action = space.getAction();
-
-        if (action == null) return;
-
-        switch (action) {
-
-            case "Collect":
-                player.collect(space.getAmount());
-                break;
-
-            case "Pay":
-                player.pay(space.getAmount());
-                break;
-
-            case "PayDay":
-                // You can later replace with salary logic
-                player.collect(10000);
-                break;
-
-            case "Spin-Again":
-                // Allow same player again
-                return;
-
-            case "Wait-Turn":
-                // Skip next turn (we’ll implement later)
-                break;
-
-            case "Business":
-                System.out.println("Business path selected (future logic)");
-                break;
-
-            case "University":
-                System.out.println("University path selected (future logic)");
-                break;
-        }
-
-        // 🔄 Refresh UI
-        dashboard.refresh(players);
-    }
+//    private void handleLanding(Player player, BoardSpace space) {
+//
+//
+//
+//        String action = space.getAction();
+//
+//        if (action == null) return;
+//
+//        switch (action) {
+//
+//            case "Collect":
+//                player.collect(space.getAmount());
+//                break;
+//
+//            case "Pay":
+//                player.pay(space.getAmount());
+//                break;
+//
+//            case "PayDay":
+//                // You can later replace with salary logic
+//                player.collect(10000);
+//                break;
+//
+//            case "Spin-Again":
+//                // Allow same player again
+//                return;
+//
+//            case "Wait-Turn":
+//                // Skip next turn (we’ll implement later)
+//                break;
+//
+//            case "Business":
+//                System.out.println("Business path selected (future logic)");
+//                break;
+//
+//            case "University":
+//                System.out.println("University path selected (future logic)");
+//                break;
+//        }
+//
+//        // 🔄 Refresh UI
+//        dashboard.refresh(players);
+//    }
 
     private void handleSplit(BoardSpace space, int remainingSteps) {
 
@@ -199,6 +203,7 @@ public class GameController {
             }
 
             PlayerToken token = engine.getCurrentToken();
+            Player currentPlayer = engine.getCurrentPlayer();
 
             token.setCurrentIndex(nextIndex);
 
@@ -207,15 +212,17 @@ public class GameController {
             token.getNode().setLayoutX(next.getX());
             token.getNode().setLayoutY(next.getY());
 
-            // 🔥 KEY FIX: resume movement
+            // 🔥 Resume movement
             if (remainingSteps > 0) {
 
                 board.animateMovement(
                         token,
                         remainingSteps,
 
-                        // 🔁 STEP CALLBACK
+                        // 🔁 STEP CALLBACK (PASS LOGIC ADDED)
                         (nextSpace, nextRemainingSteps) -> {
+
+                            processStep(currentPlayer, nextSpace, false);
 
                             if ("Split".equalsIgnoreCase(nextSpace.getSpaceType())) {
 
@@ -227,10 +234,10 @@ public class GameController {
                             }
                         },
 
-                        // ✅ FINAL LANDING
+                        // ✅ FINAL LANDING (UPDATED)
                         () -> {
                             BoardSpace landed = board.getSpace(token.getCurrentIndex());
-                            handleLanding(engine.getCurrentPlayer(), landed);
+                            processStep(currentPlayer, landed, true);
                             engine.nextTurn();
                             spinButton.setDisable(false);
                         }
@@ -241,7 +248,6 @@ public class GameController {
                 spinButton.setDisable(false);
             }
         });
-
     }
 
     private int findNextByType(String type, int fromIndex) {
@@ -257,6 +263,199 @@ public class GameController {
 
         return fromIndex + 1;
     }
+
+    private void processStep(Player player, BoardSpace space, boolean isLanding) {
+
+        String color = space.getColor();
+        String action = space.getAction();
+
+        if (color == null) color = "";
+
+        // 🔴 RED → PASS + LAND
+        if ("Red".equalsIgnoreCase(color)) {
+            System.out.println("Red space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
+            handleRed(player, space);
+        }
+
+        // ⚪ WHITE → LAND ONLY (later)
+        else if ("White".equalsIgnoreCase(color) && isLanding) {
+            System.out.println("White space: Landing - Action: " + action);
+//            handleWhite(player, space);
+        }
+
+        // 🟡 JUMP → handled later
+        else if ("Jump".equalsIgnoreCase(color)) {
+            System.out.println("Jump space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
+            handleJump(player, space);
+            return;
+        }
+
+        // 🛑 STOP → handled later
+        else if ("Stop".equalsIgnoreCase(color)) {
+            System.out.println("Stop space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
+//            handleStop(player, space);
+        }
+
+        // ⚪ NORMAL (no color) → LAND ONLY
+        else if (isLanding) {
+            System.out.println("Normal space: Landing - Action: " + action);
+            handleNormal(player, space);
+        }
+    }
+
+    private void handleRed(Player player, BoardSpace space) {
+
+        String action = space.getAction();
+
+        if (action == null) return;
+
+        switch (action) {
+
+            case "PayDay":
+                player.collect(player.getSalary());
+                break;
+
+            case "Collect":
+                player.collect(space.getAmount());
+                break;
+
+            case "Pay":
+                player.pay(space.getAmount());
+                break;
+
+            case "Wait-Turn":
+//                player.setSkipNextTurn(true);
+                break;
+
+            case "Business":
+                System.out.println("Business logic later");
+                break;
+        }
+
+        dashboard.refresh(players);
+    }
+
+    private void handleJump(Player player, BoardSpace space) {
+
+        String action = space.getAction();
+
+        if (action == null) return;
+
+        // 🚫 Prevent re-assigning profession (important safety)
+        if (player.getProfession() != Profession.NONE) {
+            System.out.println(player.getName() + " already has a profession: " + player.getProfession());
+            return;
+        }
+
+        // 🎯 Map action → Profession
+        Profession profession = mapToProfession(action);
+
+        if (profession != null) {
+
+            player.setProfession(profession);
+
+            System.out.println(player.getName() + " chose career: " + profession +
+                    " | Salary: " + profession.getSalary());
+
+            // 🎉 SHOW POPUP HERE
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Career Selected");
+                alert.setHeaderText(null);
+                alert.setContentText(player.getName() + " is now a " + profession +
+                        "\nSalary: " + profession.getSalary());
+                alert.showAndWait();
+            });
+        }
+
+        // 🎯 Move player + token to target (VERY IMPORTANT)
+        Integer targetIndex = space.getBranch();
+
+        if (targetIndex != null) {
+
+            // Update player model
+            player.setPosition(targetIndex);
+
+            // Update token UI
+            PlayerToken token = engine.getCurrentToken();
+            token.setCurrentIndex(targetIndex);
+
+            BoardSpace targetSpace = board.getSpace(targetIndex);
+
+            token.getNode().setLayoutX(targetSpace.getX());
+            token.getNode().setLayoutY(targetSpace.getY());
+        }
+
+        // 🔄 Refresh UI
+        dashboard.refresh(players);
+    }
+
+    private Profession mapToProfession(String action) {
+
+        switch (action) {
+
+            case "Doctor":
+                return Profession.DOCTOR;
+
+            case "Lawyer":
+                return Profession.LAWYER;
+
+            case "Journalist":
+                return Profession.JOURNALIST;
+
+            case "Teacher":
+                return Profession.TEACHER;
+
+            case "Physicist":
+                return Profession.PHYSICIST;
+
+            case "University":
+                return Profession.UNIVERSITY_DEGREE;
+
+            case "Business":
+                return Profession.BUSINESS;
+
+            default:
+                return null;
+        }
+    }
+
+    private void handleNormal(Player player, BoardSpace space) {
+
+        String action = space.getAction();
+
+        if (action == null) return;
+
+        switch (action) {
+
+            case "Collect":
+                player.collect(space.getAmount());
+                break;
+
+            case "Pay":
+                player.pay(space.getAmount());
+                break;
+
+            case "PayDay":
+                player.collect(10000);
+                break;
+
+            case "Spin-Again":
+                return;
+
+            case "Wait-Turn":
+                break;
+
+            case "Business":
+            case "University":
+                System.out.println("Future logic");
+                break;
+        }
+
+        dashboard.refresh(players);
+    }
+
+
 
     // =========================================================
     // 🎯 ROOT
