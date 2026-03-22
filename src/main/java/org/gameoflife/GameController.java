@@ -25,6 +25,18 @@ public class GameController {
     private Button spinButton;
     private BoardSpace space;
 
+    private boolean stopMovement = false; // Flag to control movement stopping
+
+    private enum MarriageStage {
+        NONE,
+        WAITING_FOR_GIFT_SPIN,
+        WAITING_FOR_HONEYMOON_SPIN
+    }
+
+    private MarriageStage marriageStage = MarriageStage.NONE;
+    private Player marriagePlayer;
+    private int lastGiftAmount;
+
     public GameController() {
 
         root = new BorderPane();
@@ -95,10 +107,17 @@ public class GameController {
 
         spinButton.setOnAction(e -> {
 
-            int steps = new Random().nextInt(10) + 1;
-            System.out.println("Spun: " + steps);
-
+            // 🎯 HANDLE MARRIAGE FLOW FIRST
+            if (marriageStage != MarriageStage.NONE) {
+                handleMarriageSpin();
+                return;
+            }
             Player currentPlayer = engine.getCurrentPlayer();
+
+            int steps = new Random().nextInt(10) + 1;
+            System.out.println(currentPlayer.getName() + " Spun: " + steps);
+
+
             PlayerToken token = engine.getCurrentToken();
 
             spinButton.setDisable(true);
@@ -108,10 +127,31 @@ public class GameController {
                     steps,
                     (space, remainingSteps) -> {
 
-                        // ✅ PASS event (NOT landing)
-                        processStep(currentPlayer, space, false);
+                        Player player = engine.getCurrentPlayer();
 
-                        // Existing SPLIT logic (keep as is)
+                        // 🚨 STOP SPACE (HIGHEST PRIORITY)
+                        if ("Stop".equalsIgnoreCase(space.getColor())) {
+
+                            System.out.println("STOP encountered → forcing stop");
+
+                            board.stopAnimation();
+
+                            // ✅ Treat as landing
+                            processStep(player, space, true);
+
+                            // DO NOT call nextTurn here if Marriage flow is active
+                            if (marriageStage == MarriageStage.NONE) {
+                                engine.nextTurn();
+                                spinButton.setDisable(false);
+                            }
+
+                            return;
+                        }
+
+                        // ✅ Normal PASS processing
+                        processStep(player, space, false);
+
+                        // 🔀 Split logic (unchanged)
                         if ("Split".equalsIgnoreCase(space.getSpaceType())) {
 
                             board.stopAnimation();
@@ -131,53 +171,56 @@ public class GameController {
         });
     }
 
-    // =========================================================
-    // 🎯 LANDING LOGIC (CSV DRIVEN)
-    // =========================================================
+    private void continueMovementAfterStop(Player player, int steps) {
 
-//    private void handleLanding(Player player, BoardSpace space) {
-//
-//
-//
-//        String action = space.getAction();
-//
-//        if (action == null) return;
-//
-//        switch (action) {
-//
-//            case "Collect":
-//                player.collect(space.getAmount());
-//                break;
-//
-//            case "Pay":
-//                player.pay(space.getAmount());
-//                break;
-//
-//            case "PayDay":
-//                // You can later replace with salary logic
-//                player.collect(10000);
-//                break;
-//
-//            case "Spin-Again":
-//                // Allow same player again
-//                return;
-//
-//            case "Wait-Turn":
-//                // Skip next turn (we’ll implement later)
-//                break;
-//
-//            case "Business":
-//                System.out.println("Business path selected (future logic)");
-//                break;
-//
-//            case "University":
-//                System.out.println("University path selected (future logic)");
-//                break;
-//        }
-//
-//        // 🔄 Refresh UI
-//        dashboard.refresh(players);
-//    }
+        PlayerToken token = engine.getCurrentToken();
+
+        // Reset stop flag BEFORE movement resumes
+        stopMovement = false;
+
+        board.animateMovement(
+                token,
+                steps,
+
+                // STEP CALLBACK
+                (space, remainingSteps) -> {
+
+                    // 🚨 STOP again (important for chained stops)
+                    if ("Stop".equalsIgnoreCase(space.getColor())) {
+
+                        System.out.println("STOP encountered during honeymoon");
+
+                        board.stopAnimation();
+
+                        processStep(player, space, true);
+
+                        if (marriageStage == MarriageStage.NONE) {
+                            engine.nextTurn();
+                            spinButton.setDisable(false);
+                        }
+
+                        return;
+                    }
+
+                    processStep(player, space, false);
+
+                    if (stopMovement) {
+                        board.stopAnimation();
+                        return;
+                    }
+                },
+
+                // FINAL LANDING
+                () -> {
+                    BoardSpace landed = board.getSpace(token.getCurrentIndex());
+
+                    processStep(player, landed, true);
+
+                    engine.nextTurn();
+                    spinButton.setDisable(false);
+                }
+        );
+    }
 
     private void handleSplit(BoardSpace space, int remainingSteps) {
 
@@ -244,6 +287,13 @@ public class GameController {
                 );
 
             } else {
+//                currentPlayer = engine.getCurrentPlayer();
+
+                BoardSpace landed = board.getSpace(token.getCurrentIndex());
+
+                // ✅ CRITICAL FIX → process landing
+                processStep(currentPlayer, landed, true);
+
                 engine.nextTurn();
                 spinButton.setDisable(false);
             }
@@ -286,14 +336,19 @@ public class GameController {
         // 🟡 JUMP → handled later
         else if ("Jump".equalsIgnoreCase(color)) {
             System.out.println("Jump space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
+            if (!isLanding) return;
             handleJump(player, space);
             return;
         }
 
         // 🛑 STOP → handled later
         else if ("Stop".equalsIgnoreCase(color)) {
+
             System.out.println("Stop space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-//            handleStop(player, space);
+            if (!isLanding) return;
+
+            handleStop(player, space);
+            return;
         }
 
         // ⚪ NORMAL (no color) → LAND ONLY
@@ -341,9 +396,15 @@ public class GameController {
 
         if (action == null) return;
 
-        // 🚫 Prevent re-assigning profession (important safety)
-        if (player.getProfession() != Profession.NONE) {
-            System.out.println(player.getName() + " already has a profession: " + player.getProfession());
+//        // 🚫 Prevent re-assigning profession (important safety)
+//        if (player.getProfession() != Profession.NONE) {
+//            System.out.println(player.getName() + " already has a profession: " + player.getProfession());
+//            return;
+//        }
+
+        if ("Go-To-Start".equalsIgnoreCase(action)) {
+
+            moveToTarget(player, space);
             return;
         }
 
@@ -353,6 +414,7 @@ public class GameController {
         if (profession != null) {
 
             player.setProfession(profession);
+            player.addCash(profession.getSalary()); // Give initial salary boost
 
             System.out.println(player.getName() + " chose career: " + profession +
                     " | Salary: " + profession.getSalary());
@@ -420,6 +482,126 @@ public class GameController {
         }
     }
 
+    private void moveToTarget(Player player, BoardSpace space) {
+
+        Integer targetIndex = space.getBranch();
+
+        if (targetIndex == null) return;
+
+        player.setPosition(targetIndex);
+
+        PlayerToken token = engine.getCurrentToken();
+        token.setCurrentIndex(targetIndex);
+
+        BoardSpace target = board.getSpace(targetIndex);
+
+        token.getNode().setLayoutX(target.getX());
+        token.getNode().setLayoutY(target.getY());
+    }
+
+    private void handleStop(Player player, BoardSpace space) {
+
+        String action = space.getAction();
+
+        if (action == null) return;
+
+        // 🚨 Stop further movement
+        stopMovement = true;
+
+        switch (action) {
+
+            case "Marriage":
+                handleMarriage(player);
+                break;
+
+            case "Reckoning":
+                System.out.println("Reckoning logic coming soon...");
+                break;
+        }
+    }
+
+    private void handleMarriage(Player player) {
+
+        stopMovement = true;
+
+        player.setMarried(true);
+        marriagePlayer = player;
+        marriageStage = MarriageStage.WAITING_FOR_GIFT_SPIN;
+
+        Platform.runLater(() -> {
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("💍 Marriage");
+            alert.setHeaderText(player.getName() + " got married!");
+            alert.setContentText("Spin again to collect your wedding gifts!");
+
+            alert.showAndWait();
+
+            // Enable spin button for next step
+            spinButton.setDisable(false);
+        });
+
+        dashboard.refresh(players);
+    }
+
+    private void handleMarriageSpin() {
+
+        int spin = new Random().nextInt(10) + 1;
+        System.out.println("Marriage Spin: " + spin);
+
+        if (marriageStage == MarriageStage.WAITING_FOR_GIFT_SPIN) {
+
+            int amountPerPlayer = getMarriageGiftAmount(spin);
+            int totalGift = amountPerPlayer * (players.size() - 1);
+
+            marriagePlayer.collect(totalGift);
+            lastGiftAmount = totalGift;
+
+            marriageStage = MarriageStage.WAITING_FOR_HONEYMOON_SPIN;
+
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("🎁 Wedding Gifts");
+                alert.setHeaderText("You spun: " + spin);
+                alert.setContentText("You received ₹" + totalGift +
+                        "\n\nSpin again for your honeymoon!");
+
+                alert.showAndWait();
+            });
+
+            dashboard.refresh(players);
+        }
+
+        else if (marriageStage == MarriageStage.WAITING_FOR_HONEYMOON_SPIN) {
+
+            int honeymoonSteps = spin;
+
+            marriageStage = MarriageStage.NONE;
+
+            spinButton.setDisable(true); // disable during movement
+
+            Platform.runLater(() -> {
+                continueMovementAfterStop(marriagePlayer, honeymoonSteps);
+            });
+        }
+    }
+
+    private int spinWheel() {
+        int newSpin = new Random().nextInt(10) + 1;
+        System.out.println("Spin result: " + newSpin);
+        return newSpin;
+    }
+
+    private int getMarriageGiftAmount(int spin) {
+
+        if (spin >= 1 && spin <= 3) return 2000;
+        if (spin >= 4 && spin <= 6) return 1000;
+
+        return 0;
+    }
+
+
+
     private void handleNormal(Player player, BoardSpace space) {
 
         String action = space.getAction();
@@ -437,7 +619,8 @@ public class GameController {
                 break;
 
             case "PayDay":
-                player.collect(10000);
+                player.collect(player.getSalary());
+                System.out.println("PayDay! Collected salary: " + player.getSalary());
                 break;
 
             case "Spin-Again":
