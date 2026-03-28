@@ -7,9 +7,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class GameController {
 
@@ -27,10 +25,21 @@ public class GameController {
 
     private boolean stopMovement = false; // Flag to control movement stopping
 
+    private Set<Integer> pendingWhiteSpaceIndexes = new LinkedHashSet<>();
+
+    private Queue<Runnable> whiteEventQueue = new LinkedList<>();
+
     private enum MarriageStage {
         NONE,
         WAITING_FOR_GIFT_SPIN,
         WAITING_FOR_HONEYMOON_SPIN
+    }
+
+    public enum InsuranceType {
+        LIFE,
+        AUTO,
+        FIRE,
+        STOCK
     }
 
     private MarriageStage marriageStage = MarriageStage.NONE;
@@ -105,70 +114,96 @@ public class GameController {
 
         spinButton = new Button("Spin");
 
-        spinButton.setOnAction(e -> {
+        spinButton.setOnAction(e -> handleSpinClick());
+    }
 
-            // 🎯 HANDLE MARRIAGE FLOW FIRST
-            if (marriageStage != MarriageStage.NONE) {
-                handleMarriageSpin();
-                return;
+    private void handleSpinClick() {
+
+        // 🎯 Marriage flow override
+        if (marriageStage != MarriageStage.NONE) {
+            handleMarriageSpin();
+            return;
+        }
+
+        Player player = engine.getCurrentPlayer();
+        PlayerToken token = engine.getCurrentToken();
+
+        int steps = new Random().nextInt(10) + 1;
+        System.out.println(player.getName() + " Spun: " + steps);
+
+        spinButton.setDisable(true);
+
+        startMovement(player, token, steps);
+    }
+
+    private void startMovement(Player player, PlayerToken token, int steps) {
+
+        board.animateMovement(
+                token,
+                steps,
+
+                // 🔁 STEP CALLBACK
+                (space, remainingSteps) -> handleStep(space, remainingSteps),
+
+                // 🎯 FINAL LANDING
+                () -> handleLanding(token)
+        );
+    }
+
+    private void handleStep(BoardSpace space, int remainingSteps) {
+
+        Player player = engine.getCurrentPlayer();
+
+        // 🚨 STOP (highest priority)
+        if ("Stop".equalsIgnoreCase(space.getColor())) {
+
+            System.out.println("STOP encountered → forcing stop");
+
+            board.stopAnimation();
+
+            // 🎯 NEW: process white spaces BEFORE STOP logic
+            flushPendingEvents(player);
+
+            processStep(player, space, true);
+
+            if (marriageStage == MarriageStage.NONE) {
+                endTurn();
             }
-            Player currentPlayer = engine.getCurrentPlayer();
 
-            int steps = new Random().nextInt(10) + 1;
-            System.out.println(currentPlayer.getName() + " Spun: " + steps);
+            return;
+        }
 
+        // 🔁 PASS logic
+        processStep(player, space, false);
 
-            PlayerToken token = engine.getCurrentToken();
+        // 🔀 Split handling
+        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
 
-            spinButton.setDisable(true);
+            board.stopAnimation();
 
-            board.animateMovement(
-                    token,
-                    steps,
-                    (space, remainingSteps) -> {
-
-                        Player player = engine.getCurrentPlayer();
-
-                        // 🚨 STOP SPACE (HIGHEST PRIORITY)
-                        if ("Stop".equalsIgnoreCase(space.getColor())) {
-
-                            System.out.println("STOP encountered → forcing stop");
-
-                            board.stopAnimation();
-
-                            // ✅ Treat as landing
-                            processStep(player, space, true);
-
-                            // DO NOT call nextTurn here if Marriage flow is active
-                            if (marriageStage == MarriageStage.NONE) {
-                                engine.nextTurn();
-                                spinButton.setDisable(false);
-                            }
-
-                            return;
-                        }
-
-                        // ✅ Normal PASS processing
-                        processStep(player, space, false);
-
-                        // 🔀 Split logic (unchanged)
-                        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
-
-                            board.stopAnimation();
-
-                            Platform.runLater(() ->
-                                    handleSplit(space, remainingSteps)
-                            );
-                        }
-                    },
-                    () -> {
-                        BoardSpace landed = board.getSpace(token.getCurrentIndex());
-                        processStep(currentPlayer, landed, true);
-                        engine.nextTurn();
-                        spinButton.setDisable(false);
-                    }
+            Platform.runLater(() ->
+                    handleSplit(space, remainingSteps)
             );
-        });
+        }
+    }
+
+    private void handleLanding(PlayerToken token) {
+
+        Player player = engine.getCurrentPlayer();
+
+        BoardSpace landed = board.getSpace(token.getCurrentIndex());
+
+        processStep(player, landed, true);
+
+        // 🎯 NEW: process all pending white spaces
+        flushPendingEvents(player);
+
+        endTurn();
+    }
+
+    private void endTurn() {
+        engine.nextTurn();
+        spinButton.setDisable(false);
     }
 
     private void continueMovementAfterStop(Player player, int steps) {
@@ -188,9 +223,10 @@ public class GameController {
                     // 🚨 STOP again (important for chained stops)
                     if ("Stop".equalsIgnoreCase(space.getColor())) {
 
-                        System.out.println("STOP encountered during honeymoon");
-
                         board.stopAnimation();
+
+                        // 🎯 NEW
+                        flushPendingEvents(player);
 
                         processStep(player, space, true);
 
@@ -216,6 +252,9 @@ public class GameController {
 
                     processStep(player, landed, true);
 
+                    // 🎯 NEW
+                    flushPendingEvents(player);
+
                     engine.nextTurn();
                     spinButton.setDisable(false);
                 }
@@ -228,7 +267,8 @@ public class GameController {
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Choose Path");
-        alert.setHeaderText("Select your route");
+        alert.setHeaderText("Select your Career Path");
+        alert.setContentText("Business Route: Faster but less salary\nUniversity Route: Slower but multiple career options");
 
         ButtonType business = new ButtonType("Business Route");
         ButtonType university = new ButtonType("University Route");
@@ -280,7 +320,12 @@ public class GameController {
                         // ✅ FINAL LANDING (UPDATED)
                         () -> {
                             BoardSpace landed = board.getSpace(token.getCurrentIndex());
+
                             processStep(currentPlayer, landed, true);
+
+                            // 🔥 CRITICAL FIX
+                            flushPendingEvents(currentPlayer);
+
                             engine.nextTurn();
                             spinButton.setDisable(false);
                         }
@@ -318,6 +363,7 @@ public class GameController {
 
         String color = space.getColor();
         String action = space.getAction();
+        if (action != null) action = action.trim();
 
         if (color == null) color = "";
 
@@ -328,9 +374,9 @@ public class GameController {
         }
 
         // ⚪ WHITE → LAND ONLY (later)
-        else if ("White".equalsIgnoreCase(color) && isLanding) {
-            System.out.println("White space: Landing - Action: " + action);
-//            handleWhite(player, space);
+        else if ("White".equalsIgnoreCase(color)) {
+            System.out.println("White space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
+            pendingWhiteSpaceIndexes.add(space.getIndex());
         }
 
         // 🟡 JUMP → handled later
@@ -383,11 +429,256 @@ public class GameController {
                 break;
 
             case "Business":
-                System.out.println("Business logic later");
+                handleBusiness(player, space);
+                break;
+
+            case "Accident":
+                handleClaim(player, InsuranceType.AUTO, space.getAmount(), "🚗 Accident");
+                break;
+
+            case "Fire":
+                handleClaim(player, InsuranceType.FIRE, space.getAmount(), "🔥 Fire");
+                break;
+
+            case "Stock-Crash":
+                handleClaim(player, InsuranceType.STOCK, space.getAmount(), "📉 Stock Crash");
                 break;
         }
 
         dashboard.refresh(players);
+    }
+
+    private void handleBusiness(Player player, BoardSpace space) {
+        if (player.getProfession() == Profession.NONE) {
+            player.setProfession(Profession.BUSINESS);
+            player.addCash(Profession.BUSINESS.getSalary()); // initial boost
+            System.out.println(player.getName() + " profession is set to as " + player.getProfession() + " with salary " + player.getSalary());
+        } else
+            System.out.println(player.getName() + " already has a profession → " + player.getProfession());
+    }
+
+    private void processWhiteSpaces(Player player) {
+
+        if (pendingWhiteSpaceIndexes.isEmpty()) return;
+
+        System.out.println("Processing White Spaces...");
+
+        for (Integer index : pendingWhiteSpaceIndexes) {
+
+            BoardSpace space = board.getSpace(index);
+
+            whiteEventQueue.add(() -> handleWhite(player, space));
+        }
+
+        pendingWhiteSpaceIndexes.clear();
+
+        // 🎯 Start processing queue AFTER animation
+        processWhiteEventQueue();
+    }
+
+    private void processWhiteEventQueue() {
+
+        if (whiteEventQueue.isEmpty()) return;
+
+        Runnable task = whiteEventQueue.poll();
+
+        Platform.runLater(() -> {
+
+            task.run(); // showAndWait happens safely here
+
+            // Process next AFTER this finishes
+            processWhiteEventQueue();
+        });
+    }
+
+    private void flushPendingEvents(Player player) {
+        processWhiteSpaces(player);
+    }
+
+    private void handleWhite(Player player, BoardSpace space) {
+
+        String action = space.getAction();
+        if (action != null) action = action.trim();
+        int amount = space.getAmount();
+
+        if (action == null) return;
+
+        switch (action) {
+
+            case "Pay-Life-Insurance":
+                offerInsurance(player, InsuranceType.LIFE, amount);
+                break;
+
+            case "Pay-Auto-Insurance":
+                offerInsurance(player, InsuranceType.AUTO, amount);
+                break;
+
+            case "Pay-Fire-Insurance":
+                offerInsurance(player, InsuranceType.FIRE, amount);
+                break;
+
+            case "Pay-Stock-Insurance":
+                offerInsurance(player, InsuranceType.STOCK, amount);
+                break;
+
+            case "Play-Market":
+                handlePlayMarket(player);
+                break;
+
+            default:
+                System.out.println("Unknown White action: " + action);
+        }
+
+        dashboard.refresh(players);
+    }
+
+    private void offerInsurance(Player player, InsuranceType type, int amount) {
+
+        // 🛡 Already owned check
+        if (hasInsurance(player, type)) {
+            System.out.println(player.getName() + " already has " + type + " insurance → skipping");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(type + " Insurance");
+        alert.setHeaderText("Buy " + type + " Insurance?");
+        alert.setContentText("Cost: ₹" + amount);
+
+        ButtonType yes = new ButtonType("Buy");
+        ButtonType no = new ButtonType("Skip");
+
+        alert.getButtonTypes().setAll(yes, no);
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent() && result.get() == yes) {
+
+            player.pay(amount);
+            setInsurance(player, type, true);
+
+            System.out.println(player.getName() + " bought " + type + " insurance");
+        }
+
+        dashboard.refresh(players);
+    }
+
+    private boolean hasInsurance(Player player, InsuranceType type) {
+
+        switch (type) {
+            case LIFE: return player.isLifeInsurance();
+            case AUTO: return player.hasAutoInsurance();
+            case FIRE: return player.hasFireInsurance();
+            case STOCK: return player.hasStockInsurance();
+        }
+        return false;
+    }
+
+    private void setInsurance(Player player, InsuranceType type, boolean value) {
+
+        switch (type) {
+            case LIFE: player.setLifeInsurance(value); break;
+            case AUTO: player.setAutoInsurance(value); break;
+            case FIRE: player.setFireInsurance(value); break;
+            case STOCK: player.setStockInsurance(value); player.setHasStock(true); break;
+        }
+    }
+
+    private void handleClaim(Player player,
+                             InsuranceType type,
+                             int penaltyAmount,
+                             String eventName) {
+
+        boolean insured = hasInsurance(player, type);
+
+        if (insured) {
+
+            System.out.println(player.getName() + " is insured for " + type);
+
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Insurance Claim");
+                alert.setHeaderText(eventName);
+                alert.setContentText("You are insured! No payment needed 🎉");
+                alert.showAndWait();
+            });
+
+        } else {
+
+            System.out.println(player.getName() + " is NOT insured for " + type);
+
+            player.pay(penaltyAmount);
+
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("No Insurance");
+                alert.setHeaderText(eventName);
+                alert.setContentText("You paid ₹" + penaltyAmount);
+                alert.showAndWait();
+            });
+        }
+
+        dashboard.refresh(players);
+    }
+
+    private void handlePlayMarket(Player player) {
+
+        // 🛡 Must own stock
+        if (!player.hasStock()) {
+            System.out.println(player.getName() + " has no stock → cannot play market");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("📈 Play the Market");
+        alert.setHeaderText("Do you want to play the market?");
+        alert.setContentText("Risky move! Spin will decide your fate.");
+
+        ButtonType play = new ButtonType("Play");
+        ButtonType skip = new ButtonType("Skip");
+
+        alert.getButtonTypes().setAll(play, skip);
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent() && result.get() == play) {
+
+            int spin = spinWheel();
+
+            System.out.println("Market Spin: " + spin);
+
+            if (spin >= 1 && spin <= 3) {
+
+                player.pay(60000);
+
+                showMarketResult("📉 Market Down",
+                        "You lost ₹60000");
+
+            } else if (spin >= 4 && spin <= 6) {
+
+                showMarketResult("😐 Market Stable",
+                        "No gain, no loss");
+
+            } else {
+
+                player.collect(120000);
+
+                showMarketResult("📈 Market Up",
+                        "You gained ₹120000!");
+            }
+
+            dashboard.refresh(players);
+        }
+    }
+
+    private void showMarketResult(String title, String message) {
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Market Result");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+
+        alert.showAndWait();
     }
 
     private void handleJump(Player player, BoardSpace space) {

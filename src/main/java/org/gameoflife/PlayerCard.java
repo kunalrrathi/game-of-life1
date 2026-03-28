@@ -87,6 +87,13 @@ public class PlayerCard {
     public void update(Player player) {
 
         cashLabel.setText("Cash: $" + player.getCash());
+        notesLabel.setText("Notes: " + player.getPromissoryNotes());
+        fireInsurance.setText("Fire: " + (player.hasFireInsurance() ? "Yes" : "No"));
+        autoInsurance.setText("Auto: " + (player.hasAutoInsurance() ? "Yes" : "No"));
+        stockInsurance.setText("Stock: " + (player.hasStockInsurance() ? "Yes" : "No"));
+        lifeInsurance.setText("Life: " + (player.isLifeInsurance() ? "Yes" : "No"));
+        marriedLabel.setText("Married: " + (player.isMarried() ? "Yes" : "No"));
+        childrenLabel.setText("Children: " + player.getChildren());
 
         // Add more later:
         // insuranceLabel.setText(...)

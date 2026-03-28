@@ -37,6 +37,8 @@ public class Player {
         this.retired = retired;
     }
 
+    private boolean hasStock;
+
     public void setProfession(Profession profession) {
         this.profession = profession;
         this.salary = profession.getSalary();
@@ -214,5 +216,45 @@ public class Player {
 
     public void setMarried(boolean b) {
         this.married = b;
+    }
+
+    public boolean isLifeInsurance() {
+        return lifeInsurance;
+    }
+
+    public void setLifeInsurance(boolean lifeInsurance) {
+        this.lifeInsurance = lifeInsurance;
+    }
+
+    public boolean hasFireInsurance() {
+        return fireInsurance;
+    }
+
+    public void setFireInsurance(boolean fireInsurance) {
+        this.fireInsurance = fireInsurance;
+    }
+
+    public boolean hasStockInsurance() {
+        return stockInsurance;
+    }
+
+    public void setStockInsurance(boolean stockInsurance) {
+        this.stockInsurance = stockInsurance;
+    }
+
+    public boolean hasStock() {
+        return hasStock;
+    }
+
+    public void setHasStock(boolean hasStock) {
+        this.hasStock = hasStock;
+    }
+
+    public boolean isMarried() {
+        return married;
+    }
+
+    public String getChildren() {
+        return String.valueOf(children);
     }
 }

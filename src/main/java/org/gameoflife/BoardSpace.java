@@ -59,7 +59,7 @@ public class BoardSpace {
     }
 
     public String getAction() {
-        return action;
+        return action == null ? null : action.trim();
     }
 
     public int getAmount() {
