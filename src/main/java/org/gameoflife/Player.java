@@ -257,4 +257,15 @@ public class Player {
     public String getChildren() {
         return String.valueOf(children);
     }
+
+    public boolean hasInsurance(GameController.InsuranceType type) {
+
+        switch (type) {
+            case LIFE: return isLifeInsurance();
+            case AUTO: return hasAutoInsurance();
+            case FIRE: return hasFireInsurance();
+            case STOCK: return hasStockInsurance();
+        }
+        return false;
+    }
 }

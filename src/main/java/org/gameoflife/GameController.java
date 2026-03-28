@@ -25,15 +25,10 @@ public class GameController {
 
     private boolean stopMovement = false; // Flag to control movement stopping
 
-    private Set<Integer> pendingWhiteSpaceIndexes = new LinkedHashSet<>();
-
-    private Queue<Runnable> whiteEventQueue = new LinkedList<>();
-
-    private enum MarriageStage {
-        NONE,
-        WAITING_FOR_GIFT_SPIN,
-        WAITING_FOR_HONEYMOON_SPIN
-    }
+    private WhiteSpaceHandler whiteHandler;
+    private RedSpaceHandler redHandler;
+    private JumpSpaceHandler jumpHandler;
+    private StopSpaceHandler stopHandler;
 
     public enum InsuranceType {
         LIFE,
@@ -41,10 +36,6 @@ public class GameController {
         FIRE,
         STOCK
     }
-
-    private MarriageStage marriageStage = MarriageStage.NONE;
-    private Player marriagePlayer;
-    private int lastGiftAmount;
 
     public GameController() {
 
@@ -72,7 +63,30 @@ public class GameController {
         // 🟢 Step 6: Controls
         setupControls();
 
-        // 🟢 Step 7: Layout
+        // 🟢 Step 7: Initialize Handlers
+        whiteHandler = new WhiteSpaceHandler(board, dashboard);
+        redHandler = new RedSpaceHandler(dashboard);
+        jumpHandler = new JumpSpaceHandler(board, engine, dashboard);
+        stopHandler = new StopSpaceHandler(dashboard, new StopSpaceHandler.StopCallback() {
+
+            @Override
+            public void enableSpin() {
+                spinButton.setDisable(false);
+            }
+
+            @Override
+            public void continueMovement(Player player, int steps) {
+                continueMovementAfterStop(player, steps);
+            }
+
+            @Override
+            public void endTurn() {
+                engine.nextTurn();
+                spinButton.setDisable(false);
+            }
+        });
+
+        // 🟢 Step 8: Layout
         root.setCenter(board.getBoardPane());
         root.setRight(dashboard.getPanel());
         root.setBottom(new HBox(10, spinButton));
@@ -120,8 +134,8 @@ public class GameController {
     private void handleSpinClick() {
 
         // 🎯 Marriage flow override
-        if (marriageStage != MarriageStage.NONE) {
-            handleMarriageSpin();
+        if (stopHandler.isInProgress()) {
+            stopHandler.handleSpin();
             return;
         }
 
@@ -166,7 +180,7 @@ public class GameController {
 
             processStep(player, space, true);
 
-            if (marriageStage == MarriageStage.NONE) {
+            if (stopHandler.isInProgress()) {
                 endTurn();
             }
 
@@ -230,7 +244,7 @@ public class GameController {
 
                         processStep(player, space, true);
 
-                        if (marriageStage == MarriageStage.NONE) {
+                        if (!stopHandler.isInProgress()) {
                             engine.nextTurn();
                             spinButton.setDisable(false);
                         }
@@ -370,30 +384,39 @@ public class GameController {
         // 🔴 RED → PASS + LAND
         if ("Red".equalsIgnoreCase(color)) {
             System.out.println("Red space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            handleRed(player, space);
+            redHandler.handle(player, space);
+
+            // 👉 Keep claim logic here (important)
+            if ("Accident".equalsIgnoreCase(action)) {
+                handleClaim(player, InsuranceType.AUTO, space.getAmount(), "🚗 Accident");
+            }
+            else if ("Fire".equalsIgnoreCase(action)) {
+                handleClaim(player, InsuranceType.FIRE, space.getAmount(), "🔥 Fire");
+            }
+            else if ("Stock-Crash".equalsIgnoreCase(action)) {
+                handleClaim(player, InsuranceType.STOCK, space.getAmount(), "📉 Stock Crash");
+            }
         }
 
         // ⚪ WHITE → LAND ONLY (later)
         else if ("White".equalsIgnoreCase(color)) {
             System.out.println("White space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            pendingWhiteSpaceIndexes.add(space.getIndex());
+            whiteHandler.collect(space);
         }
 
         // 🟡 JUMP → handled later
         else if ("Jump".equalsIgnoreCase(color)) {
             System.out.println("Jump space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
             if (!isLanding) return;
-            handleJump(player, space);
+            jumpHandler.handle(player, space);
             return;
         }
 
         // 🛑 STOP → handled later
         else if ("Stop".equalsIgnoreCase(color)) {
-
             System.out.println("Stop space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
             if (!isLanding) return;
-
-            handleStop(player, space);
+            stopHandler.handle(player, space);
             return;
         }
 
@@ -404,184 +427,8 @@ public class GameController {
         }
     }
 
-    private void handleRed(Player player, BoardSpace space) {
-
-        String action = space.getAction();
-
-        if (action == null) return;
-
-        switch (action) {
-
-            case "PayDay":
-                player.collect(player.getSalary());
-                break;
-
-            case "Collect":
-                player.collect(space.getAmount());
-                break;
-
-            case "Pay":
-                player.pay(space.getAmount());
-                break;
-
-            case "Wait-Turn":
-//                player.setSkipNextTurn(true);
-                break;
-
-            case "Business":
-                handleBusiness(player, space);
-                break;
-
-            case "Accident":
-                handleClaim(player, InsuranceType.AUTO, space.getAmount(), "🚗 Accident");
-                break;
-
-            case "Fire":
-                handleClaim(player, InsuranceType.FIRE, space.getAmount(), "🔥 Fire");
-                break;
-
-            case "Stock-Crash":
-                handleClaim(player, InsuranceType.STOCK, space.getAmount(), "📉 Stock Crash");
-                break;
-        }
-
-        dashboard.refresh(players);
-    }
-
-    private void handleBusiness(Player player, BoardSpace space) {
-        if (player.getProfession() == Profession.NONE) {
-            player.setProfession(Profession.BUSINESS);
-            player.addCash(Profession.BUSINESS.getSalary()); // initial boost
-            System.out.println(player.getName() + " profession is set to as " + player.getProfession() + " with salary " + player.getSalary());
-        } else
-            System.out.println(player.getName() + " already has a profession → " + player.getProfession());
-    }
-
-    private void processWhiteSpaces(Player player) {
-
-        if (pendingWhiteSpaceIndexes.isEmpty()) return;
-
-        System.out.println("Processing White Spaces...");
-
-        for (Integer index : pendingWhiteSpaceIndexes) {
-
-            BoardSpace space = board.getSpace(index);
-
-            whiteEventQueue.add(() -> handleWhite(player, space));
-        }
-
-        pendingWhiteSpaceIndexes.clear();
-
-        // 🎯 Start processing queue AFTER animation
-        processWhiteEventQueue();
-    }
-
-    private void processWhiteEventQueue() {
-
-        if (whiteEventQueue.isEmpty()) return;
-
-        Runnable task = whiteEventQueue.poll();
-
-        Platform.runLater(() -> {
-
-            task.run(); // showAndWait happens safely here
-
-            // Process next AFTER this finishes
-            processWhiteEventQueue();
-        });
-    }
-
     private void flushPendingEvents(Player player) {
-        processWhiteSpaces(player);
-    }
-
-    private void handleWhite(Player player, BoardSpace space) {
-
-        String action = space.getAction();
-        if (action != null) action = action.trim();
-        int amount = space.getAmount();
-
-        if (action == null) return;
-
-        switch (action) {
-
-            case "Pay-Life-Insurance":
-                offerInsurance(player, InsuranceType.LIFE, amount);
-                break;
-
-            case "Pay-Auto-Insurance":
-                offerInsurance(player, InsuranceType.AUTO, amount);
-                break;
-
-            case "Pay-Fire-Insurance":
-                offerInsurance(player, InsuranceType.FIRE, amount);
-                break;
-
-            case "Pay-Stock-Insurance":
-                offerInsurance(player, InsuranceType.STOCK, amount);
-                break;
-
-            case "Play-Market":
-                handlePlayMarket(player);
-                break;
-
-            default:
-                System.out.println("Unknown White action: " + action);
-        }
-
-        dashboard.refresh(players);
-    }
-
-    private void offerInsurance(Player player, InsuranceType type, int amount) {
-
-        // 🛡 Already owned check
-        if (hasInsurance(player, type)) {
-            System.out.println(player.getName() + " already has " + type + " insurance → skipping");
-            return;
-        }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(type + " Insurance");
-        alert.setHeaderText("Buy " + type + " Insurance?");
-        alert.setContentText("Cost: ₹" + amount);
-
-        ButtonType yes = new ButtonType("Buy");
-        ButtonType no = new ButtonType("Skip");
-
-        alert.getButtonTypes().setAll(yes, no);
-
-        Optional<ButtonType> result = alert.showAndWait();
-
-        if (result.isPresent() && result.get() == yes) {
-
-            player.pay(amount);
-            setInsurance(player, type, true);
-
-            System.out.println(player.getName() + " bought " + type + " insurance");
-        }
-
-        dashboard.refresh(players);
-    }
-
-    private boolean hasInsurance(Player player, InsuranceType type) {
-
-        switch (type) {
-            case LIFE: return player.isLifeInsurance();
-            case AUTO: return player.hasAutoInsurance();
-            case FIRE: return player.hasFireInsurance();
-            case STOCK: return player.hasStockInsurance();
-        }
-        return false;
-    }
-
-    private void setInsurance(Player player, InsuranceType type, boolean value) {
-
-        switch (type) {
-            case LIFE: player.setLifeInsurance(value); break;
-            case AUTO: player.setAutoInsurance(value); break;
-            case FIRE: player.setFireInsurance(value); break;
-            case STOCK: player.setStockInsurance(value); player.setHasStock(true); break;
-        }
+        whiteHandler.flush(player);
     }
 
     private void handleClaim(Player player,
@@ -589,7 +436,7 @@ public class GameController {
                              int penaltyAmount,
                              String eventName) {
 
-        boolean insured = hasInsurance(player, type);
+        boolean insured = player.hasInsurance(type);
 
         if (insured) {
 
@@ -621,277 +468,11 @@ public class GameController {
         dashboard.refresh(players);
     }
 
-    private void handlePlayMarket(Player player) {
-
-        // 🛡 Must own stock
-        if (!player.hasStock()) {
-            System.out.println(player.getName() + " has no stock → cannot play market");
-            return;
-        }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("📈 Play the Market");
-        alert.setHeaderText("Do you want to play the market?");
-        alert.setContentText("Risky move! Spin will decide your fate.");
-
-        ButtonType play = new ButtonType("Play");
-        ButtonType skip = new ButtonType("Skip");
-
-        alert.getButtonTypes().setAll(play, skip);
-
-        Optional<ButtonType> result = alert.showAndWait();
-
-        if (result.isPresent() && result.get() == play) {
-
-            int spin = spinWheel();
-
-            System.out.println("Market Spin: " + spin);
-
-            if (spin >= 1 && spin <= 3) {
-
-                player.pay(60000);
-
-                showMarketResult("📉 Market Down",
-                        "You lost ₹60000");
-
-            } else if (spin >= 4 && spin <= 6) {
-
-                showMarketResult("😐 Market Stable",
-                        "No gain, no loss");
-
-            } else {
-
-                player.collect(120000);
-
-                showMarketResult("📈 Market Up",
-                        "You gained ₹120000!");
-            }
-
-            dashboard.refresh(players);
-        }
-    }
-
-    private void showMarketResult(String title, String message) {
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Market Result");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-
-        alert.showAndWait();
-    }
-
-    private void handleJump(Player player, BoardSpace space) {
-
-        String action = space.getAction();
-
-        if (action == null) return;
-
-//        // 🚫 Prevent re-assigning profession (important safety)
-//        if (player.getProfession() != Profession.NONE) {
-//            System.out.println(player.getName() + " already has a profession: " + player.getProfession());
-//            return;
-//        }
-
-        if ("Go-To-Start".equalsIgnoreCase(action)) {
-
-            moveToTarget(player, space);
-            return;
-        }
-
-        // 🎯 Map action → Profession
-        Profession profession = mapToProfession(action);
-
-        if (profession != null) {
-
-            player.setProfession(profession);
-            player.addCash(profession.getSalary()); // Give initial salary boost
-
-            System.out.println(player.getName() + " chose career: " + profession +
-                    " | Salary: " + profession.getSalary());
-
-            // 🎉 SHOW POPUP HERE
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Career Selected");
-                alert.setHeaderText(null);
-                alert.setContentText(player.getName() + " is now a " + profession +
-                        "\nSalary: " + profession.getSalary());
-                alert.showAndWait();
-            });
-        }
-
-        // 🎯 Move player + token to target (VERY IMPORTANT)
-        Integer targetIndex = space.getBranch();
-
-        if (targetIndex != null) {
-
-            // Update player model
-            player.setPosition(targetIndex);
-
-            // Update token UI
-            PlayerToken token = engine.getCurrentToken();
-            token.setCurrentIndex(targetIndex);
-
-            BoardSpace targetSpace = board.getSpace(targetIndex);
-
-            token.getNode().setLayoutX(targetSpace.getX());
-            token.getNode().setLayoutY(targetSpace.getY());
-        }
-
-        // 🔄 Refresh UI
-        dashboard.refresh(players);
-    }
-
-    private Profession mapToProfession(String action) {
-
-        switch (action) {
-
-            case "Doctor":
-                return Profession.DOCTOR;
-
-            case "Lawyer":
-                return Profession.LAWYER;
-
-            case "Journalist":
-                return Profession.JOURNALIST;
-
-            case "Teacher":
-                return Profession.TEACHER;
-
-            case "Physicist":
-                return Profession.PHYSICIST;
-
-            case "University":
-                return Profession.UNIVERSITY_DEGREE;
-
-            case "Business":
-                return Profession.BUSINESS;
-
-            default:
-                return null;
-        }
-    }
-
-    private void moveToTarget(Player player, BoardSpace space) {
-
-        Integer targetIndex = space.getBranch();
-
-        if (targetIndex == null) return;
-
-        player.setPosition(targetIndex);
-
-        PlayerToken token = engine.getCurrentToken();
-        token.setCurrentIndex(targetIndex);
-
-        BoardSpace target = board.getSpace(targetIndex);
-
-        token.getNode().setLayoutX(target.getX());
-        token.getNode().setLayoutY(target.getY());
-    }
-
-    private void handleStop(Player player, BoardSpace space) {
-
-        String action = space.getAction();
-
-        if (action == null) return;
-
-        // 🚨 Stop further movement
-        stopMovement = true;
-
-        switch (action) {
-
-            case "Marriage":
-                handleMarriage(player);
-                break;
-
-            case "Reckoning":
-                System.out.println("Reckoning logic coming soon...");
-                break;
-        }
-    }
-
-    private void handleMarriage(Player player) {
-
-        stopMovement = true;
-
-        player.setMarried(true);
-        marriagePlayer = player;
-        marriageStage = MarriageStage.WAITING_FOR_GIFT_SPIN;
-
-        Platform.runLater(() -> {
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("💍 Marriage");
-            alert.setHeaderText(player.getName() + " got married!");
-            alert.setContentText("Spin again to collect your wedding gifts!");
-
-            alert.showAndWait();
-
-            // Enable spin button for next step
-            spinButton.setDisable(false);
-        });
-
-        dashboard.refresh(players);
-    }
-
-    private void handleMarriageSpin() {
-
-        int spin = new Random().nextInt(10) + 1;
-        System.out.println("Marriage Spin: " + spin);
-
-        if (marriageStage == MarriageStage.WAITING_FOR_GIFT_SPIN) {
-
-            int amountPerPlayer = getMarriageGiftAmount(spin);
-            int totalGift = amountPerPlayer * (players.size() - 1);
-
-            marriagePlayer.collect(totalGift);
-            lastGiftAmount = totalGift;
-
-            marriageStage = MarriageStage.WAITING_FOR_HONEYMOON_SPIN;
-
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("🎁 Wedding Gifts");
-                alert.setHeaderText("You spun: " + spin);
-                alert.setContentText("You received ₹" + totalGift +
-                        "\n\nSpin again for your honeymoon!");
-
-                alert.showAndWait();
-            });
-
-            dashboard.refresh(players);
-        }
-
-        else if (marriageStage == MarriageStage.WAITING_FOR_HONEYMOON_SPIN) {
-
-            int honeymoonSteps = spin;
-
-            marriageStage = MarriageStage.NONE;
-
-            spinButton.setDisable(true); // disable during movement
-
-            Platform.runLater(() -> {
-                continueMovementAfterStop(marriagePlayer, honeymoonSteps);
-            });
-        }
-    }
-
     private int spinWheel() {
         int newSpin = new Random().nextInt(10) + 1;
         System.out.println("Spin result: " + newSpin);
         return newSpin;
     }
-
-    private int getMarriageGiftAmount(int spin) {
-
-        if (spin >= 1 && spin <= 3) return 2000;
-        if (spin >= 4 && spin <= 6) return 1000;
-
-        return 0;
-    }
-
-
 
     private void handleNormal(Player player, BoardSpace space) {
 
