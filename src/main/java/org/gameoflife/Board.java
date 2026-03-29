@@ -138,6 +138,24 @@ public class Board {
 
                         int nextIndex = current.getNextIndex();
 
+                        // 🎯 HANDLE END OF BOARD (Retire)
+                        if (nextIndex < 0) {
+
+                            stopAnimation();
+
+                            // Notify controller with current space
+                            if (onStep != null) {
+                                onStep.accept(current, 0);
+                            }
+
+                            if (onFinished != null) {
+                                onFinished.run();
+                            }
+
+                            return;
+                        }
+
+                        // Safety guard
                         if (nextIndex >= spaces.size()) {
                             nextIndex = spaces.size() - 1;
                         }

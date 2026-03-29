@@ -8,6 +8,9 @@ public class GameEngine {
     private List<Player> players;
     private List<PlayerToken> tokens;
 
+    private Player firstMillionaire = null;
+    private Integer luckyNumber = null;
+
     private int currentPlayerIndex = 0;
 
     public GameEngine(Board board, List<Player> players, List<PlayerToken> tokens) {
@@ -26,6 +29,26 @@ public class GameEngine {
 
     public void nextTurn() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+    }
+
+    public boolean hasMillionaire() {
+        return firstMillionaire != null;
+    }
+
+    public Player getFirstMillionaire() {
+        return firstMillionaire;
+    }
+
+    public void setFirstMillionaire(Player player) {
+        this.firstMillionaire = player;
+    }
+
+    public Integer getLuckyNumber() {
+        return luckyNumber;
+    }
+
+    public void setLuckyNumber(int number) {
+        this.luckyNumber = number;
     }
 }
 

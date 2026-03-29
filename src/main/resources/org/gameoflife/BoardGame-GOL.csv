@@ -162,5 +162,5 @@ Index,C1,C2,Color,Action,Amount,SpaceType,nextIndex,Branch
 160,608,192,,Collect-Stock,600000,Main,161,
 161,570,194,Red,Collect-Life,240000,Main,162,
 162,556,235,,Pay ,20000,Main,163,
-163,561,279,,Retire,,Main,0,
+163,561,279,,Retire,,Main,-1,
 164,374,317,,Spin Roller,,,0,

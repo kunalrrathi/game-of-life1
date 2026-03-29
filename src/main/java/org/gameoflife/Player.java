@@ -19,8 +19,6 @@ public class Player {
     private static final int LOAN_AMOUNT = 20000;
     private static final int INTEREST_PER_NOTE = 1000;
 
-    private boolean retired = false;
-
     private boolean autoInsurance;
     private boolean fireInsurance;
     private boolean stockInsurance;
@@ -29,13 +27,9 @@ public class Player {
     private int children;
     private boolean married;
 
-    public boolean isRetired() {
-        return retired;
-    }
+    private boolean isBankrupt = false;
+    private boolean isRetired = false;
 
-    public void setRetired(boolean retired) {
-        this.retired = retired;
-    }
 
     private boolean hasStock;
 
@@ -124,7 +118,7 @@ public class Player {
 
     public void payInterest() {
 
-        if (retired) return;
+        if (isRetired) return;
 
         int totalInterest = promissoryNotes * INTEREST_PER_NOTE;
 
@@ -254,8 +248,28 @@ public class Player {
         return married;
     }
 
-    public String getChildren() {
-        return String.valueOf(children);
+    public int getChildren() {
+        return children;
+    }
+
+    public void addChild() {
+        children++;
+    }
+
+    public boolean isBankrupt() {
+        return isBankrupt;
+    }
+
+    public void setBankrupt(boolean bankrupt) {
+        isBankrupt = bankrupt;
+    }
+
+    public boolean isRetired() {
+        return isRetired;
+    }
+
+    public void setRetired(boolean retired) {
+        isRetired = retired;
     }
 
     public boolean hasInsurance(GameController.InsuranceType type) {
@@ -267,5 +281,9 @@ public class Player {
             case STOCK: return hasStockInsurance();
         }
         return false;
+    }
+
+    public void setCash(int i) {
+        this.cash = i;
     }
 }

@@ -82,7 +82,14 @@ public class GameController {
             @Override
             public void endTurn() {
                 engine.nextTurn();
+                Platform.runLater(() -> checkGameEnd());
                 spinButton.setDisable(false);
+            }
+
+            @Override
+            public void endGame(Player winner) {
+                showWinner(winner);
+                spinButton.setDisable(true);
             }
         });
 
@@ -217,6 +224,7 @@ public class GameController {
 
     private void endTurn() {
         engine.nextTurn();
+        Platform.runLater(() -> checkGameEnd());
         spinButton.setDisable(false);
     }
 
@@ -246,6 +254,7 @@ public class GameController {
 
                         if (!stopHandler.isInProgress()) {
                             engine.nextTurn();
+                            Platform.runLater(() -> checkGameEnd());
                             spinButton.setDisable(false);
                         }
 
@@ -270,6 +279,7 @@ public class GameController {
                     flushPendingEvents(player);
 
                     engine.nextTurn();
+                    Platform.runLater(() -> checkGameEnd());
                     spinButton.setDisable(false);
                 }
         );
@@ -341,6 +351,7 @@ public class GameController {
                             flushPendingEvents(currentPlayer);
 
                             engine.nextTurn();
+                            Platform.runLater(() -> checkGameEnd());
                             spinButton.setDisable(false);
                         }
                 );
@@ -354,6 +365,7 @@ public class GameController {
                 processStep(currentPlayer, landed, true);
 
                 engine.nextTurn();
+                Platform.runLater(() -> checkGameEnd());
                 spinButton.setDisable(false);
             }
         });
@@ -425,6 +437,12 @@ public class GameController {
             System.out.println("Normal space: Landing - Action: " + action);
             handleNormal(player, space);
         }
+
+        //Retirement logic
+        else if ("Retire".equalsIgnoreCase(action)) {
+            handleRetirement(player);
+            return;
+        }
     }
 
     private void flushPendingEvents(Player player) {
@@ -468,6 +486,69 @@ public class GameController {
         dashboard.refresh(players);
     }
 
+    private void handleRetirement(Player player) {
+
+        if (player.isRetired()) return; // 🔥 IMPORTANT
+
+        System.out.println(player.getName() + " reached MILLIONAIRE!");
+
+        // 🏆 First player bonus
+        if (!engine.hasMillionaire()) {
+
+            engine.setFirstMillionaire(player);
+
+            player.collect(240000);
+
+            int lucky = spinWheel();
+
+            engine.setLuckyNumber(lucky);
+
+            showPopup("🏆 First Millionaire!",
+                    player.getName() + " gets ₹240000 bonus!\nLucky Number: " + lucky);
+
+        } else {
+
+            showPopup("🎉 Millionaire",
+                    player.getName() + " reached Millionaire!");
+        }
+        player.setRetired(true);
+        dashboard.refresh(players);
+    }
+
+    private void applyLuckyNumberRule(Player currentPlayer, int spin) {
+
+        Player millionaire = engine.getFirstMillionaire();
+        Integer lucky = engine.getLuckyNumber();
+
+        if (millionaire == null || lucky == null) return;
+
+        // Do not apply to the millionaire themselves
+        if (currentPlayer == millionaire) return;
+
+        if (spin == lucky) {
+
+            currentPlayer.pay(24000);
+            millionaire.collect(24000);
+
+            showPopup("🎯 Lucky Number!",
+                    currentPlayer.getName() + " hit " + lucky +
+                            "\nPaid ₹24000 to " + millionaire.getName());
+        }
+    }
+
+    private void showPopup(String title, String message) {
+
+        Platform.runLater(() -> {
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Game Update");
+            alert.setHeaderText(title);
+            alert.setContentText(message);
+
+            alert.showAndWait();
+        });
+    }
+
     private int spinWheel() {
         int newSpin = new Random().nextInt(10) + 1;
         System.out.println("Spin result: " + newSpin);
@@ -500,17 +581,70 @@ public class GameController {
 
             case "Wait-Turn":
                 break;
-
-            case "Business":
-            case "University":
-                System.out.println("Future logic");
-                break;
         }
 
         dashboard.refresh(players);
     }
 
+    private void checkGameEnd() {
 
+        boolean allFinished = players.stream()
+                .allMatch(p -> p.isBankrupt() || p.isRetired());
+
+        if (!allFinished) return;
+
+        Player winner = players.stream()
+                .max(Comparator.comparingInt(this::calculateFinalWealth))
+                .orElse(null);
+
+        showWinner(winner);
+
+        // 🔥 NEW
+        updateGameControls();
+    }
+
+    private int calculateFinalWealth(Player player) {
+
+        int total = player.getCash();
+
+        // 💰 Stock value
+        if (player.hasStock()) {
+            total += 120000;
+        }
+
+        // 💰 Life insurance value
+        if (player.isLifeInsurance()) {
+            total += 8000;
+        }
+
+        return total;
+    }
+
+    private void showWinner(Player winner) {
+
+        if (winner == null) return;
+
+        Platform.runLater(() -> {
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("🏁 Game Over");
+            alert.setHeaderText("Winner: " + winner.getName());
+            alert.setContentText("Total Wealth: ₹" + calculateFinalWealth(winner));
+
+            alert.showAndWait();
+        });
+    }
+
+
+    private void updateGameControls() {
+
+        boolean allFinished = players.stream()
+                .allMatch(p -> p.isRetired() || p.isBankrupt());
+
+        if (allFinished) {
+            spinButton.setDisable(true);
+        }
+    }
 
     // =========================================================
     // 🎯 ROOT

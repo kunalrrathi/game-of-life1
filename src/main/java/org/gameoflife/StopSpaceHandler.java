@@ -2,6 +2,7 @@ package org.gameoflife;
 
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 
 import java.util.List;
 import java.util.Random;
@@ -12,6 +13,7 @@ public class StopSpaceHandler {
         void enableSpin();
         void continueMovement(Player player, int steps);
         void endTurn();
+        void endGame(Player winner); // ✅ NEW
     }
 
     private StopCallback callback;
@@ -51,7 +53,7 @@ public class StopSpaceHandler {
                 break;
 
             case "Reckoning":
-                System.out.println("Reckoning logic coming soon...");
+                handleReckoning(player);
                 break;
         }
     }
@@ -125,4 +127,102 @@ public class StopSpaceHandler {
 
         return 0;
     }
+
+    //Reckoning: logic
+    private void handleReckoning(Player player) {
+
+        System.out.println("DAY OF RECKONING!");
+
+        // 1️⃣ Pay loans
+        player.settleLoansAtRetirement();
+
+        // 2️⃣ (Future) Child bonus
+        int childBonus = player.getChildren() * 48000;
+        if (childBonus > 0) {
+            player.collect(childBonus);
+        }
+
+        dashboard.refresh(List.of(player));
+
+        // 3️⃣ Ask decision
+        askRetirementChoice(player);
+    }
+
+    private void askRetirementChoice(Player player) {
+
+        Platform.runLater(() -> {
+
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Day of Reckoning");
+            alert.setHeaderText("Choose your path");
+
+            ButtonType millionaire = new ButtonType("Become Millionaire");
+            ButtonType tycoon = new ButtonType("Try Tycoon");
+
+            alert.getButtonTypes().setAll(millionaire, tycoon);
+
+            alert.showAndWait().ifPresent(choice -> {
+
+                if (choice == millionaire) {
+                    handleMillionairePath(player);
+                } else {
+                    handleTycoon(player);
+                }
+            });
+        });
+    }
+
+    private void handleMillionairePath(Player player) {
+
+        System.out.println(player.getName() + " chose Millionaire path");
+
+        int spin = new Random().nextInt(10) + 1;
+
+        System.out.println("Spin: " + spin);
+
+        // Continue movement
+        callback.continueMovement(player, spin);
+    }
+
+    private void handleTycoon(Player player) {
+
+        int spin = new Random().nextInt(10) + 1;
+
+        System.out.println("Tycoon Spin: " + spin);
+
+        int chosenNumber = new Random().nextInt(10) + 1;
+
+        System.out.println("Player chose number: " + chosenNumber);
+
+        if (spin == chosenNumber) {
+
+            showResult("🎉 TYCOON!",
+                    player.getName() + " is the WINNER!");
+
+            callback.endGame(player);
+
+        } else {
+
+            player.setCash(0);
+            player.setBankrupt(true); // bankrupt
+
+            showResult("💀 BANKRUPT",
+                    "You lost everything!");
+
+            // TODO: mark player bankrupt
+        }
+
+        dashboard.refresh(List.of(player));
+    }
+
+    private void showResult(String title, String message) {
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Result");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
 }
+
