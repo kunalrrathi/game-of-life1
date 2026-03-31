@@ -1,11 +1,13 @@
 package org.gameoflife;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.util.Duration;
 
 import java.util.*;
 
@@ -64,7 +66,7 @@ public class GameController {
         setupControls();
 
         // 🟢 Step 7: Initialize Handlers
-        whiteHandler = new WhiteSpaceHandler(board, dashboard);
+        whiteHandler = new WhiteSpaceHandler(board, dashboard, engine);
         redHandler = new RedSpaceHandler(dashboard);
         jumpHandler = new JumpSpaceHandler(board, engine, dashboard);
         stopHandler = new StopSpaceHandler(dashboard, new StopSpaceHandler.StopCallback() {
@@ -289,86 +291,118 @@ public class GameController {
 
         System.out.println("Split space reached! Offering path choices...");
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Choose Path");
-        alert.setHeaderText("Select your Career Path");
-        alert.setContentText("Business Route: Faster but less salary\nUniversity Route: Slower but multiple career options");
+        PlayerToken token = engine.getCurrentToken();
+        Player currentPlayer = engine.getCurrentPlayer();
 
-        ButtonType business = new ButtonType("Business Route");
-        ButtonType university = new ButtonType("University Route");
+        // 🧠 Decide path FIRST
+        int nextIndex;
 
-        alert.getButtonTypes().setAll(business, university);
+        if (currentPlayer.isComputer()) {
 
-        alert.showAndWait().ifPresent(choice -> {
+            // 🤖 AI Decision
+            ComputerDecisionEngine decisionEngine = engine.getDecisionEngine();
 
-            int nextIndex;
+            boolean chooseUniversity = decisionEngine.chooseUniversityPath(currentPlayer);
 
-            if (choice == university) {
+            if (chooseUniversity) {
                 nextIndex = findNextByType("Main", space.getIndex());
+                System.out.println(currentPlayer.getName() + " (AI) chose University Route");
             } else {
                 nextIndex = findNextByType("Shortcut", space.getIndex());
+                System.out.println(currentPlayer.getName() + " (AI) chose Business Route");
             }
 
-            PlayerToken token = engine.getCurrentToken();
-            Player currentPlayer = engine.getCurrentPlayer();
+            // 👉 Continue flow directly
+            continueMovementAfterSplit(token, currentPlayer, nextIndex, remainingSteps, space);
 
-            token.setCurrentIndex(nextIndex);
+        } else {
 
-            BoardSpace next = board.getSpace(nextIndex);
+            // 👤 HUMAN FLOW (existing popup)
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Choose Path");
+            alert.setHeaderText("Select your Career Path");
+            alert.setContentText("Business Route: Faster but less salary\nUniversity Route: Slower but multiple career options");
 
-            token.getNode().setLayoutX(next.getX());
-            token.getNode().setLayoutY(next.getY());
+            ButtonType business = new ButtonType("Business Route");
+            ButtonType university = new ButtonType("University Route");
 
-            // 🔥 Resume movement
-            if (remainingSteps > 0) {
+            alert.getButtonTypes().setAll(business, university);
 
-                board.animateMovement(
-                        token,
-                        remainingSteps,
+            alert.showAndWait().ifPresent(choice -> {
 
-                        // 🔁 STEP CALLBACK (PASS LOGIC ADDED)
-                        (nextSpace, nextRemainingSteps) -> {
+                int selectedIndex;
 
-                            processStep(currentPlayer, nextSpace, false);
+                if (choice == university) {
+                    selectedIndex = findNextByType("Main", space.getIndex());
+                } else {
+                    selectedIndex = findNextByType("Shortcut", space.getIndex());
+                }
 
-                            if ("Split".equalsIgnoreCase(nextSpace.getSpaceType())) {
+                continueMovementAfterSplit(token, currentPlayer, selectedIndex, remainingSteps, space);
+            });
+        }
+    }
 
-                                board.stopAnimation();
+    private void continueMovementAfterSplit(
+            PlayerToken token,
+            Player currentPlayer,
+            int nextIndex,
+            int remainingSteps,
+            BoardSpace space
+    ) {
 
-                                Platform.runLater(() ->
-                                        handleSplit(nextSpace, nextRemainingSteps)
-                                );
-                            }
-                        },
+        token.setCurrentIndex(nextIndex);
 
-                        // ✅ FINAL LANDING (UPDATED)
-                        () -> {
-                            BoardSpace landed = board.getSpace(token.getCurrentIndex());
+        BoardSpace next = board.getSpace(nextIndex);
 
-                            processStep(currentPlayer, landed, true);
+        token.getNode().setLayoutX(next.getX());
+        token.getNode().setLayoutY(next.getY());
 
-                            // 🔥 CRITICAL FIX
-                            flushPendingEvents(currentPlayer);
+        if (remainingSteps > 0) {
 
-                            engine.nextTurn();
-                            Platform.runLater(() -> checkGameEnd());
-                            spinButton.setDisable(false);
+            board.animateMovement(
+                    token,
+                    remainingSteps,
+
+                    // 🔁 STEP CALLBACK
+                    (nextSpace, nextRemainingSteps) -> {
+
+                        processStep(currentPlayer, nextSpace, false);
+
+                        if ("Split".equalsIgnoreCase(nextSpace.getSpaceType())) {
+
+                            board.stopAnimation();
+
+                            Platform.runLater(() ->
+                                    handleSplit(nextSpace, nextRemainingSteps)
+                            );
                         }
-                );
+                    },
 
-            } else {
-//                currentPlayer = engine.getCurrentPlayer();
+                    // ✅ FINAL LANDING
+                    () -> {
+                        BoardSpace landed = board.getSpace(token.getCurrentIndex());
 
-                BoardSpace landed = board.getSpace(token.getCurrentIndex());
+                        processStep(currentPlayer, landed, true);
 
-                // ✅ CRITICAL FIX → process landing
-                processStep(currentPlayer, landed, true);
+                        flushPendingEvents(currentPlayer);
 
-                engine.nextTurn();
-                Platform.runLater(() -> checkGameEnd());
-                spinButton.setDisable(false);
-            }
-        });
+                        engine.nextTurn();
+                        Platform.runLater(() -> checkGameEnd());
+                        spinButton.setDisable(false);
+                    }
+            );
+
+        } else {
+
+            BoardSpace landed = board.getSpace(token.getCurrentIndex());
+
+            processStep(currentPlayer, landed, true);
+
+            engine.nextTurn();
+            Platform.runLater(() -> checkGameEnd());
+            spinButton.setDisable(false);
+        }
     }
 
     private int findNextByType(String type, int fromIndex) {
@@ -503,13 +537,14 @@ public class GameController {
 
             engine.setLuckyNumber(lucky);
 
-            showPopup("🏆 First Millionaire!",
-                    player.getName() + " gets ₹240000 bonus!\nLucky Number: " + lucky);
+            if(!player.isComputer())
+                showPopup("🏆 First Millionaire!",
+                        player.getName() + " gets ₹240000 bonus!\nLucky Number: " + lucky);
 
         } else {
-
-            showPopup("🎉 Millionaire",
-                    player.getName() + " reached Millionaire!");
+            if (!player.isComputer())
+                showPopup("🎉 Millionaire",
+                        player.getName() + " reached Millionaire!");
         }
         player.setRetired(true);
         dashboard.refresh(players);
@@ -529,10 +564,10 @@ public class GameController {
 
             currentPlayer.pay(24000);
             millionaire.collect(24000);
-
-            showPopup("🎯 Lucky Number!",
-                    currentPlayer.getName() + " hit " + lucky +
-                            "\nPaid ₹24000 to " + millionaire.getName());
+            if (!currentPlayer.isComputer())
+                showPopup("🎯 Lucky Number!",
+                        currentPlayer.getName() + " hit " + lucky +
+                                "\nPaid ₹24000 to " + millionaire.getName());
         }
     }
 
@@ -644,6 +679,16 @@ public class GameController {
         if (allFinished) {
             spinButton.setDisable(true);
         }
+    }
+
+    private void handleComputerTurn(Player player) {
+        PauseTransition delay = new PauseTransition(Duration.seconds(1));
+
+        delay.setOnFinished(e -> {
+            spinWheel(); // reuse your existing spin logic
+        });
+
+        delay.play();
     }
 
     // =========================================================

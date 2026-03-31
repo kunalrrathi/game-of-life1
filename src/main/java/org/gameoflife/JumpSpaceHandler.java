@@ -43,15 +43,21 @@ public class JumpSpaceHandler {
                     " | Salary: " + profession.getSalary());
 
             // 🎉 Popup
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Career Selected");
-                alert.setHeaderText(null);
-                alert.setContentText(player.getName() +
-                        " is now a " + profession +
-                        "\nSalary: " + profession.getSalary());
-                alert.showAndWait();
-            });
+            if (!player.isComputer()) {
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Career Selected");
+                    alert.setHeaderText(null);
+                    alert.setContentText(player.getName() +
+                            " is now a " + profession +
+                            "\nSalary: " + profession.getSalary());
+                    alert.showAndWait();
+                });
+            } else {
+                System.out.println(player.getName() +
+                        " (AI) is now a " + profession +
+                        " | Salary: " + profession.getSalary());
+            }
         }
 
         // 🎯 Move player

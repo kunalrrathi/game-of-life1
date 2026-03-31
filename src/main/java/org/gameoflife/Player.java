@@ -4,6 +4,8 @@ import javafx.scene.shape.Circle;
 
 public class Player {
 
+    private boolean isComputer;
+
     private String name;
     private Profession profession = Profession.NONE;
     private int salary = 0;
@@ -139,13 +141,13 @@ public class Player {
     public void pay(int amount) {
         ensureCashAvailable(amount);
         cash -= amount;
-        System.out.println("Paid: " + amount + " | Remaining Cash: " + cash);
+        System.out.println(this.getName() + ": Paid: " + amount + " | Remaining Cash: " + cash);
     }
 
     // For collecting money (e.g. salary, collect cards) **********************************
     public void collect(int amount) {
         cash += amount;
-        System.out.println("Collect: " + amount + " | Remaining Cash: " + cash);
+        System.out.println(this.getName() + ": Collect: " + amount + " | Remaining Cash: " + cash);
     }
 
     public boolean canRepayLoan() {
@@ -285,5 +287,13 @@ public class Player {
 
     public void setCash(int i) {
         this.cash = i;
+    }
+
+    public boolean isComputer() {
+        return isComputer;
+    }
+
+    public void setComputer(boolean computer) {
+        isComputer = computer;
     }
 }

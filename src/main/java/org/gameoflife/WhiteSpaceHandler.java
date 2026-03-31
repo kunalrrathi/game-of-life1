@@ -13,6 +13,7 @@ public class WhiteSpaceHandler {
 
     private PlayersDashboard dashboard;
     private Board board;
+    private GameEngine engine;
 
     public enum InsuranceType {
         LIFE,
@@ -21,9 +22,10 @@ public class WhiteSpaceHandler {
         STOCK
     }
 
-    public WhiteSpaceHandler(Board board, PlayersDashboard dashboard) {
+    public WhiteSpaceHandler(Board board, PlayersDashboard dashboard, GameEngine engine) {
         this.board = board;
         this.dashboard = dashboard;
+        this.engine = engine;
     }
 
     // =========================================================
@@ -121,6 +123,26 @@ public class WhiteSpaceHandler {
             return;
         }
 
+        // 🧠 STEP 1: Handle COMPUTER PLAYER FIRST
+        if (player.isComputer()) {
+
+            ComputerDecisionEngine decisionEngine = engine.getDecisionEngine();
+
+            boolean shouldBuy = decisionEngine.shouldBuyInsurance(player);
+
+            if (shouldBuy) {
+                player.pay(amount);
+                setInsurance(player, type, true);
+
+                System.out.println(player.getName() + " (AI) bought " + type + " insurance");
+            } else {
+                System.out.println(player.getName() + " (AI) skipped " + type + " insurance");
+            }
+
+            return; // 🚨 VERY IMPORTANT → prevents popup
+        }
+
+        // 👤 STEP 2: HUMAN PLAYER (existing logic untouched)
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(type + " Insurance");
         alert.setHeaderText("Buy " + type + " Insurance?");
@@ -134,7 +156,6 @@ public class WhiteSpaceHandler {
         Optional<ButtonType> result = alert.showAndWait();
 
         if (result.isPresent() && result.get() == yes) {
-
             player.pay(amount);
             setInsurance(player, type, true);
 

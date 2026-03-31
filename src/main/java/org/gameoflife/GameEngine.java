@@ -4,6 +4,7 @@ import java.util.List;
 
 public class GameEngine {
 
+    private ComputerDecisionEngine decisionEngine = new ComputerDecisionEngine();
     private Board board;
     private List<Player> players;
     private List<PlayerToken> tokens;
@@ -49,6 +50,10 @@ public class GameEngine {
 
     public void setLuckyNumber(int number) {
         this.luckyNumber = number;
+    }
+
+    public ComputerDecisionEngine getDecisionEngine() {
+        return decisionEngine;
     }
 }
 

@@ -1,8 +1,10 @@
 package org.gameoflife;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.util.Duration;
 
 import java.util.List;
 import java.util.Random;
@@ -69,17 +71,31 @@ public class StopSpaceHandler {
         marriagePlayer = player;
         marriageStage = MarriageStage.WAITING_FOR_GIFT_SPIN;
 
-        Platform.runLater(() -> {
+        // 🤖 COMPUTER PLAYER FLOW
+        if (player.isComputer()) {
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("💍 Marriage");
-            alert.setHeaderText(player.getName() + " got married!");
-            alert.setContentText("Spin again to collect your wedding gifts!");
+            System.out.println(player.getName() + " (AI) got married! Proceeding to gift spin...");
 
-            alert.showAndWait();
+            // Small delay to feel natural (optional but recommended)
+            PauseTransition delay = new PauseTransition(Duration.seconds(1));
+            delay.setOnFinished(e -> callback.enableSpin());
+            delay.play();
 
-            callback.enableSpin();
-        });
+        } else {
+
+            // 👤 HUMAN PLAYER FLOW (existing UI)
+            Platform.runLater(() -> {
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("💍 Marriage");
+                alert.setHeaderText(player.getName() + " got married!");
+                alert.setContentText("Spin again to collect your wedding gifts!");
+
+                alert.showAndWait();
+
+                callback.enableSpin();
+            });
+        }
 
         dashboard.refresh(List.of(player));
     }

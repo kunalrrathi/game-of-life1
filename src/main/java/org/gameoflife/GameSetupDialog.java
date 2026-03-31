@@ -10,6 +10,20 @@ import java.util.Optional;
 
 public class GameSetupDialog {
 
+    private static final String[] AI_NAMES = {
+            "Neha 🤖",
+            "Nikhil 🤖",
+            "Nitya 🤖",
+            "Sharayu 🤖",
+            "Mummyji 🤖",
+            "Papaji 🤖"
+    };
+
+    private static String getRandomAIName() {
+        int index = new java.util.Random().nextInt(AI_NAMES.length);
+        return AI_NAMES[index];
+    }
+
     public static List<Player> showDialog() {
 
         Dialog<List<Player>> dialog = new Dialog<>();
@@ -21,34 +35,67 @@ public class GameSetupDialog {
         TextField playerCountField = new TextField();
         playerCountField.setPromptText("Enter number of players");
 
-        VBox insuranceBox = new VBox(5);
+        VBox playerConfigBox = new VBox(8);
+        List<PlayerSetupRow> playerRows = new ArrayList<>();
 
         root.getChildren().addAll(
                 new Label("Number of Players"),
                 playerCountField,
-                new Label("Car Insurance"),
-                insuranceBox
+                new Label("Player Configuration"),
+                playerConfigBox
         );
 
-        // Update checkboxes dynamically
+        // 🔄 Dynamically update player rows
         playerCountField.textProperty().addListener((obs, oldVal, newVal) -> {
 
-            insuranceBox.getChildren().clear();
+            playerConfigBox.getChildren().clear();
+            playerRows.clear();
 
             try {
-
                 int count = Integer.parseInt(newVal);
 
                 for (int i = 1; i <= count; i++) {
 
-                    CheckBox cb = new CheckBox("Player " + i + " - Car Insurance ($1000)");
+                    int playerIndex = i;
 
-                    insuranceBox.getChildren().add(cb);
+                    Label label = new Label("Player " + playerIndex);
+
+                    TextField nameField = new TextField();
+                    nameField.setPromptText("Enter name");
+                    nameField.setText("Player " + playerIndex); // default
+
+                    CheckBox insuranceCB = new CheckBox("Car Insurance ($1000)");
+                    CheckBox computerCB = new CheckBox("Computer Player");
+
+                    // 🤖 Toggle behavior
+                    computerCB.selectedProperty().addListener((obs2, wasSelected, isNowSelected) -> {
+
+                        if (isNowSelected) {
+                            nameField.setText(getRandomAIName());
+                            nameField.setDisable(true);
+                            insuranceCB.setDisable(true);
+                        } else {
+                            nameField.setDisable(false);
+                            insuranceCB.setDisable(false);
+                            nameField.setText("Player " + playerIndex);
+                        }
+                    });
+
+                    VBox playerRowUI = new VBox(3,
+                            label,
+                            new Label("Name"),
+                            nameField,
+                            insuranceCB,
+                            computerCB
+                    );
+
+                    playerRows.add(new PlayerSetupRow(nameField, insuranceCB, computerCB));
+                    playerConfigBox.getChildren().add(playerRowUI);
                 }
+
                 dialog.getDialogPane().getScene().getWindow().sizeToScene();
 
             } catch (Exception ignored) {}
-
         });
 
         dialog.getDialogPane().setContent(root);
@@ -66,13 +113,29 @@ public class GameSetupDialog {
 
                 for (int i = 0; i < count; i++) {
 
-                    CheckBox cb = (CheckBox) insuranceBox.getChildren().get(i);
+                    PlayerSetupRow row = playerRows.get(i);
 
-                    Player p = new Player("Player " + (i + 1));
+                    String name = row.nameField.getText().trim();
 
-                    if (cb.isSelected()) {
+                    if (name.isEmpty()) {
+                        name = "Player " + (i + 1);
+                    }
+                    Player p;
+                    if (row.computerCheckBox.isSelected())
+                        p = new Player(name);
+                    else
+                        p = new Player(name + " 👤");
+
+
+                    // 🚗 Insurance
+                    if (row.insuranceCheckBox.isSelected()) {
                         p.setAutoInsurance(true);
                         p.pay(1000);
+                    }
+
+                    // 🤖 Computer Player
+                    if (row.computerCheckBox.isSelected()) {
+                        p.setComputer(true);
                     }
 
                     players.add(p);
@@ -87,5 +150,18 @@ public class GameSetupDialog {
         Optional<List<Player>> result = dialog.showAndWait();
 
         return result.orElse(new ArrayList<>());
+    }
+
+    // 🧩 Helper class to keep UI clean
+    static class PlayerSetupRow {
+        TextField nameField;
+        CheckBox insuranceCheckBox;
+        CheckBox computerCheckBox;
+
+        public PlayerSetupRow(TextField nameField, CheckBox insuranceCheckBox, CheckBox computerCheckBox) {
+            this.nameField = nameField;
+            this.insuranceCheckBox = insuranceCheckBox;
+            this.computerCheckBox = computerCheckBox;
+        }
     }
 }
