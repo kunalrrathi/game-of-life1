@@ -1,15 +1,22 @@
 package org.gameoflife;
 
+import javafx.animation.Interpolator;
 import javafx.animation.PauseTransition;
+import javafx.animation.RotateTransition;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
+//import java.applet.AudioClip;
 import java.util.*;
+
+import static utilities.SpinSoundGenerator.playSpinSound;
 
 public class GameController {
 
@@ -32,6 +39,8 @@ public class GameController {
     private JumpSpaceHandler jumpHandler;
     private StopSpaceHandler stopHandler;
 
+    private StackPane spinnerContainer;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -43,11 +52,13 @@ public class GameController {
 
         root = new BorderPane();
 
+
         // 🟢 Step 1: Setup dialog
         players = GameSetupDialog.showDialog();
 
         // 🟢 Step 2: Board
         board = new Board();
+        this.spinnerContainer = board.getSpinnerContainer();
 
         // 🟢 Step 3: Dashboard
         dashboard = new PlayersDashboard();
@@ -84,7 +95,12 @@ public class GameController {
             @Override
             public void endTurn() {
                 engine.nextTurn();
-                Platform.runLater(() -> checkGameEnd());
+
+                Platform.runLater(() -> {
+                    if (!checkGameEnd()) {
+                        triggerNextTurn(); // 🚀 handles both AI + human
+                    }
+                });
                 spinButton.setDisable(false);
             }
 
@@ -98,7 +114,7 @@ public class GameController {
         // 🟢 Step 8: Layout
         root.setCenter(board.getBoardPane());
         root.setRight(dashboard.getPanel());
-        root.setBottom(new HBox(10, spinButton));
+//        root.setBottom(new HBox(10, spinButton));
     }
 
     // =========================================================
@@ -136,8 +152,7 @@ public class GameController {
     private void setupControls() {
 
         spinButton = new Button("Spin");
-
-        spinButton.setOnAction(e -> handleSpinClick());
+        spinnerContainer.setOnMouseClicked(e -> handleSpinClick());
     }
 
     private void handleSpinClick() {
@@ -152,12 +167,50 @@ public class GameController {
         PlayerToken token = engine.getCurrentToken();
 
         int steps = new Random().nextInt(10) + 1;
-        System.out.println(player.getName() + " Spun: " + steps);
 
-        spinButton.setDisable(true);
+        System.out.println(player.getName() + " Spinning...");
 
-        startMovement(player, token, steps);
+        spinnerContainer.setDisable(true); // prevent double clicks
+
+        double anglePerStep = 360.0 / 10;
+        double wheelAngle = (steps - 1) * anglePerStep;
+
+        double arrowOffset = 180;
+        double baseOffset = 335; // tweak this
+
+        double targetAngle = 360 * 4 + arrowOffset + wheelAngle - baseOffset;
+
+        System.out.println("Steps: " + steps + " | Angle: " + targetAngle);
+
+        // 🎯 Animation
+        RotateTransition rotate = new RotateTransition(Duration.seconds(2), spinnerContainer);
+        rotate.setToAngle(targetAngle);
+        rotate.setInterpolator(Interpolator.EASE_OUT);
+
+        // 🔊 Play sound
+        playSpinSound();
+
+        rotate.setOnFinished(e -> {
+
+            System.out.println(player.getName() + " Spun: " + steps);
+
+            spinnerContainer.setDisable(false);
+
+            // 🚀 Continue game logic
+            startMovement(player, token, steps);
+        });
+
+        rotate.play();
     }
+
+//    private void playSpinSoundBKUP() {
+//
+//        AudioClip clip = new AudioClip(
+//                getClass().getResource("/spin.mp3").toExternalForm()
+//        );
+//
+//        clip.play();
+//    }
 
     private void startMovement(Player player, PlayerToken token, int steps) {
 
@@ -224,9 +277,39 @@ public class GameController {
         endTurn();
     }
 
+    private void triggerNextTurn() {
+
+        Player currentPlayer = engine.getCurrentPlayer();
+
+        if (currentPlayer.isComputer()) {
+
+            System.out.println(currentPlayer.getName() + " (AI) is taking turn...");
+
+            spinButton.setDisable(true); // prevent manual click
+
+            PauseTransition delay = new PauseTransition(Duration.seconds(1.2));
+
+            delay.setOnFinished(e -> {
+                spinButton.setDisable(false); // 🔥 CRITICAL FIX
+                spinButton.setDisable(false); // 🔥 CRITICAL FIX
+                Platform.runLater(() -> handleSpinClick());            // AI Turn Logic
+            });
+
+            delay.play();
+
+        } else {
+            spinButton.setDisable(false); // human plays
+        }
+    }
+
     private void endTurn() {
         engine.nextTurn();
-        Platform.runLater(() -> checkGameEnd());
+
+        Platform.runLater(() -> {
+            if (!checkGameEnd()) {
+                triggerNextTurn(); // 🚀 handles both AI + human
+            }
+        });
         spinButton.setDisable(false);
     }
 
@@ -256,7 +339,12 @@ public class GameController {
 
                         if (!stopHandler.isInProgress()) {
                             engine.nextTurn();
-                            Platform.runLater(() -> checkGameEnd());
+
+                            Platform.runLater(() -> {
+                                if (!checkGameEnd()) {
+                                    triggerNextTurn(); // 🚀 handles both AI + human
+                                }
+                            });
                             spinButton.setDisable(false);
                         }
 
@@ -281,7 +369,12 @@ public class GameController {
                     flushPendingEvents(player);
 
                     engine.nextTurn();
-                    Platform.runLater(() -> checkGameEnd());
+
+                    Platform.runLater(() -> {
+                        if (!checkGameEnd()) {
+                            triggerNextTurn(); // 🚀 handles both AI + human
+                        }
+                    });
                     spinButton.setDisable(false);
                 }
         );
@@ -388,7 +481,12 @@ public class GameController {
                         flushPendingEvents(currentPlayer);
 
                         engine.nextTurn();
-                        Platform.runLater(() -> checkGameEnd());
+
+                        Platform.runLater(() -> {
+                            if (!checkGameEnd()) {
+                                triggerNextTurn(); // 🚀 handles both AI + human
+                            }
+                        });
                         spinButton.setDisable(false);
                     }
             );
@@ -400,7 +498,12 @@ public class GameController {
             processStep(currentPlayer, landed, true);
 
             engine.nextTurn();
-            Platform.runLater(() -> checkGameEnd());
+
+            Platform.runLater(() -> {
+                if (!checkGameEnd()) {
+                    triggerNextTurn(); // 🚀 handles both AI + human
+                }
+            });
             spinButton.setDisable(false);
         }
     }
@@ -621,12 +724,14 @@ public class GameController {
         dashboard.refresh(players);
     }
 
-    private void checkGameEnd() {
+    private boolean checkGameEnd() {
 
         boolean allFinished = players.stream()
                 .allMatch(p -> p.isBankrupt() || p.isRetired());
 
-        if (!allFinished) return;
+        if (!allFinished) {
+            return false; // ⛔ game still running
+        }
 
         Player winner = players.stream()
                 .max(Comparator.comparingInt(this::calculateFinalWealth))
@@ -634,8 +739,10 @@ public class GameController {
 
         showWinner(winner);
 
-        // 🔥 NEW
+        // 🔥 Existing logic
         updateGameControls();
+
+        return true; // ✅ game ended
     }
 
     private int calculateFinalWealth(Player player) {

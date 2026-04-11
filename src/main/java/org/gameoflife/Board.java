@@ -3,11 +3,13 @@ package org.gameoflife;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -24,6 +26,8 @@ public class Board {
     private List<PlayerToken> tokens = new ArrayList<>();
     private Timeline timeline;
 
+//    private ImageView spinnerBase;
+    private StackPane spinnerContainer;
     public Board() {
 
         boardPane = new Pane();
@@ -63,7 +67,70 @@ public class Board {
             label.setLayoutX(space.getX() - 7);
             label.setLayoutY(space.getY() + 5);
             boardPane.getChildren().add(label);
+
+//            spinnerContainer = new StackPane();
+//
+//            ImageView spinnerBase = new ImageView(new Image(getClass().getResource("/org/gameoflife/spinner.png").toExternalForm()));
+//            spinnerBase.setFitWidth(270);
+//            spinnerBase.setFitHeight(270);
+//            spinnerBase.setLayoutX(230);
+//            spinnerBase.setLayoutY(200);
+//
+//            spinnerContainer.setLayoutX(230);
+//            spinnerContainer.setLayoutY(200);
+//
+//
+//            spinnerContainer.setPrefSize(270, 270); // same as spinnerBase
+//            spinnerContainer.getChildren().add(spinnerBase);
+//
+//            boardPane.getChildren().add(spinnerBase);
+//
+//            ImageView spinnerArrow = new ImageView(new Image(getClass().getResource("/org/gameoflife/arrow.png").toExternalForm()));
+//            spinnerArrow.setFitWidth(80);
+//            spinnerArrow.setFitHeight(80);
+//            spinnerArrow.setLayoutX(220);
+//            spinnerArrow.setLayoutY(310);
+//
+//            boardPane.getChildren().add(spinnerArrow);
         }
+
+        // 🔥 CREATE SPINNER ONLY ONCE
+
+        spinnerContainer = new StackPane();
+
+        ImageView spinnerBase = new ImageView(
+                new Image(getClass().getResource("/org/gameoflife/spinner.png").toExternalForm())
+        );
+
+        spinnerBase.setFitWidth(270);
+        spinnerBase.setFitHeight(270);
+
+// Container size
+        spinnerContainer.setPrefSize(270, 270);
+
+// Center spinner inside container
+        spinnerContainer.getChildren().add(spinnerBase);
+
+// Position container
+        spinnerContainer.setLayoutX(240);
+        spinnerContainer.setLayoutY(200);
+
+// Add to board
+        boardPane.getChildren().add(spinnerContainer);
+
+// Arrow (static)
+        ImageView spinnerArrow = new ImageView(
+                new Image(getClass().getResource("/org/gameoflife/arrow.png").toExternalForm())
+        );
+
+        spinnerArrow.setFitWidth(80);
+        spinnerArrow.setFitHeight(80);
+
+// Position arrow
+        spinnerArrow.setLayoutX(220);
+        spinnerArrow.setLayoutY(310);
+
+        boardPane.getChildren().add(spinnerArrow);
     }
 
     public void positionTokens(List<PlayerToken> tokens, int spaceIndex) {
@@ -186,4 +253,7 @@ public class Board {
         timeline.play();
     }
 
+    public StackPane getSpinnerContainer() {
+        return spinnerContainer;
+    }
 }
