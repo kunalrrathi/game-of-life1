@@ -67,58 +67,26 @@ public class Board {
             label.setLayoutX(space.getX() - 7);
             label.setLayoutY(space.getY() + 5);
             boardPane.getChildren().add(label);
-
-//            spinnerContainer = new StackPane();
-//
-//            ImageView spinnerBase = new ImageView(new Image(getClass().getResource("/org/gameoflife/spinner.png").toExternalForm()));
-//            spinnerBase.setFitWidth(270);
-//            spinnerBase.setFitHeight(270);
-//            spinnerBase.setLayoutX(230);
-//            spinnerBase.setLayoutY(200);
-//
-//            spinnerContainer.setLayoutX(230);
-//            spinnerContainer.setLayoutY(200);
-//
-//
-//            spinnerContainer.setPrefSize(270, 270); // same as spinnerBase
-//            spinnerContainer.getChildren().add(spinnerBase);
-//
-//            boardPane.getChildren().add(spinnerBase);
-//
-//            ImageView spinnerArrow = new ImageView(new Image(getClass().getResource("/org/gameoflife/arrow.png").toExternalForm()));
-//            spinnerArrow.setFitWidth(80);
-//            spinnerArrow.setFitHeight(80);
-//            spinnerArrow.setLayoutX(220);
-//            spinnerArrow.setLayoutY(310);
-//
-//            boardPane.getChildren().add(spinnerArrow);
         }
 
-        // 🔥 CREATE SPINNER ONLY ONCE
-
-        spinnerContainer = new StackPane();
-
+        // Add spinner base (static)
         ImageView spinnerBase = new ImageView(
                 new Image(getClass().getResource("/org/gameoflife/spinner.png").toExternalForm())
         );
 
-        spinnerBase.setFitWidth(270);
-        spinnerBase.setFitHeight(270);
+        spinnerBase.setFitWidth(300);
+        spinnerBase.setFitHeight(300);
 
-// Container size
-        spinnerContainer.setPrefSize(270, 270);
+        spinnerBase.setLayoutX(220);
+        spinnerBase.setLayoutY(180);
 
-// Center spinner inside container
-        spinnerContainer.getChildren().add(spinnerBase);
+        // Add to board
+        boardPane.getChildren().add(spinnerBase);
 
-// Position container
-        spinnerContainer.setLayoutX(240);
-        spinnerContainer.setLayoutY(200);
+        // 🔥 CREATE SPINNER ONLY ONCE
+        spinnerContainer = new StackPane();
 
-// Add to board
-        boardPane.getChildren().add(spinnerContainer);
-
-// Arrow (static)
+        // Arrow (dynamic, rotates)
         ImageView spinnerArrow = new ImageView(
                 new Image(getClass().getResource("/org/gameoflife/arrow.png").toExternalForm())
         );
@@ -126,11 +94,13 @@ public class Board {
         spinnerArrow.setFitWidth(80);
         spinnerArrow.setFitHeight(80);
 
-// Position arrow
-        spinnerArrow.setLayoutX(220);
-        spinnerArrow.setLayoutY(310);
+        // Position container
+        spinnerContainer.setLayoutX(330);
+        spinnerContainer.setLayoutY(280);
 
-        boardPane.getChildren().add(spinnerArrow);
+        spinnerContainer.getChildren().add(spinnerArrow);
+
+        boardPane.getChildren().add(spinnerContainer);
     }
 
     public void positionTokens(List<PlayerToken> tokens, int spaceIndex) {

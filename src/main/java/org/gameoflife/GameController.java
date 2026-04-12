@@ -176,11 +176,9 @@ public class GameController {
         double wheelAngle = (steps - 1) * anglePerStep;
 
         double arrowOffset = 180;
-        double baseOffset = 335; // tweak this
+        double baseOffset = 90; // tweak this
 
         double targetAngle = 360 * 4 + arrowOffset + wheelAngle - baseOffset;
-
-        System.out.println("Steps: " + steps + " | Angle: " + targetAngle);
 
         // 🎯 Animation
         RotateTransition rotate = new RotateTransition(Duration.seconds(2), spinnerContainer);
