@@ -41,6 +41,11 @@ public class GameController {
 
     private StackPane spinnerContainer;
 
+    private SpinnerController spinnerController;
+    private TurnManager turnManager;
+    private MovementController movementController;
+    private SpaceResolver spaceResolver;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -59,6 +64,7 @@ public class GameController {
         // 🟢 Step 2: Board
         board = new Board();
         this.spinnerContainer = board.getSpinnerContainer();
+        spinnerController = new SpinnerController(spinnerContainer);
 
         // 🟢 Step 3: Dashboard
         dashboard = new PlayersDashboard();
@@ -72,6 +78,36 @@ public class GameController {
 
         // 🟢 Step 5: Engine
         engine = new GameEngine(board, players, tokens);
+
+        turnManager = new TurnManager(
+                engine,
+                this::triggerNextTurn,
+                this::checkGameEnd
+        );
+
+        movementController = new MovementController(
+                board,
+                engine,
+                new MovementController.MovementCallback() {
+
+                    @Override
+                    public void processStep(Player p, BoardSpace s, boolean landing) {
+                        GameController.this.processStep(p, s, landing);
+                    }
+
+                    @Override
+                    public void flushPending(Player p) {
+                        flushPendingEvents(p);
+                    }
+
+                    @Override
+                    public void finishTurn() {
+                        if (!stopHandler.isInProgress()) {
+                            GameController.this.finishTurn();
+                        }
+                    }
+                }
+        );
 
         // 🟢 Step 6: Controls
         setupControls();
@@ -93,15 +129,14 @@ public class GameController {
             }
 
             @Override
-            public void endTurn() {
-                engine.nextTurn();
+            public void requestSpinForStop() {
+                handleSpinClick();
+            }
 
-                Platform.runLater(() -> {
-                    if (!checkGameEnd()) {
-                        triggerNextTurn(); // 🚀 handles both AI + human
-                    }
-                });
-                spinButton.setDisable(false);
+            @Override
+            public void endTurn() {
+                finishTurn();
+//                spinButton.setDisable(false);
             }
 
             @Override
@@ -110,6 +145,13 @@ public class GameController {
                 spinButton.setDisable(true);
             }
         });
+
+        spaceResolver = new SpaceResolver(
+                whiteHandler,
+                redHandler,
+                jumpHandler,
+                stopHandler
+        );
 
         // 🟢 Step 8: Layout
         root.setCenter(board.getBoardPane());
@@ -157,58 +199,20 @@ public class GameController {
 
     private void handleSpinClick() {
 
-        // 🎯 Marriage flow override
-        if (stopHandler.isInProgress()) {
-            stopHandler.handleSpin();
-            return;
-        }
-
         Player player = engine.getCurrentPlayer();
         PlayerToken token = engine.getCurrentToken();
 
-        int steps = new Random().nextInt(10) + 1;
-
-        System.out.println(player.getName() + " Spinning...");
-
-        spinnerContainer.setDisable(true); // prevent double clicks
-
-        double anglePerStep = 360.0 / 10;
-        double wheelAngle = (steps - 1) * anglePerStep;
-
-        double arrowOffset = 180;
-        double baseOffset = 90; // tweak this
-
-        double targetAngle = 360 * 4 + arrowOffset + wheelAngle - baseOffset;
-
-        // 🎯 Animation
-        RotateTransition rotate = new RotateTransition(Duration.seconds(2), spinnerContainer);
-        rotate.setToAngle(targetAngle);
-        rotate.setInterpolator(Interpolator.EASE_OUT);
-
-        // 🔊 Play sound
-        playSpinSound();
-
-        rotate.setOnFinished(e -> {
+        spinnerController.spin(steps -> {
 
             System.out.println(player.getName() + " Spun: " + steps);
 
-            spinnerContainer.setDisable(false);
-
-            // 🚀 Continue game logic
-            startMovement(player, token, steps);
+            if (stopHandler.isInProgress()) {
+                stopHandler.handleSpin(steps);
+            } else {
+                movementController.move(player, token, steps);
+            }
         });
-
-        rotate.play();
     }
-
-//    private void playSpinSoundBKUP() {
-//
-//        AudioClip clip = new AudioClip(
-//                getClass().getResource("/spin.mp3").toExternalForm()
-//        );
-//
-//        clip.play();
-//    }
 
     private void startMovement(Player player, PlayerToken token, int steps) {
 
@@ -222,6 +226,11 @@ public class GameController {
                 // 🎯 FINAL LANDING
                 () -> handleLanding(token)
         );
+    }
+
+    private void finishTurn() {
+        turnManager.finishTurn();
+        spinButton.setDisable(false);
     }
 
     private void handleStep(BoardSpace space, int remainingSteps) {
@@ -240,7 +249,7 @@ public class GameController {
 
             processStep(player, space, true);
 
-            if (stopHandler.isInProgress()) {
+            if (!stopHandler.isInProgress()) {
                 endTurn();
             }
 
@@ -301,14 +310,7 @@ public class GameController {
     }
 
     private void endTurn() {
-        engine.nextTurn();
-
-        Platform.runLater(() -> {
-            if (!checkGameEnd()) {
-                triggerNextTurn(); // 🚀 handles both AI + human
-            }
-        });
-        spinButton.setDisable(false);
+        finishTurn();
     }
 
     private void continueMovementAfterStop(Player player, int steps) {
@@ -336,13 +338,7 @@ public class GameController {
                         processStep(player, space, true);
 
                         if (!stopHandler.isInProgress()) {
-                            engine.nextTurn();
-
-                            Platform.runLater(() -> {
-                                if (!checkGameEnd()) {
-                                    triggerNextTurn(); // 🚀 handles both AI + human
-                                }
-                            });
+                            finishTurn();
                             spinButton.setDisable(false);
                         }
 
@@ -366,13 +362,7 @@ public class GameController {
                     // 🎯 NEW
                     flushPendingEvents(player);
 
-                    engine.nextTurn();
-
-                    Platform.runLater(() -> {
-                        if (!checkGameEnd()) {
-                            triggerNextTurn(); // 🚀 handles both AI + human
-                        }
-                    });
+                    finishTurn();
                     spinButton.setDisable(false);
                 }
         );
@@ -478,13 +468,7 @@ public class GameController {
 
                         flushPendingEvents(currentPlayer);
 
-                        engine.nextTurn();
-
-                        Platform.runLater(() -> {
-                            if (!checkGameEnd()) {
-                                triggerNextTurn(); // 🚀 handles both AI + human
-                            }
-                        });
+                        finishTurn();
                         spinButton.setDisable(false);
                     }
             );
@@ -495,13 +479,7 @@ public class GameController {
 
             processStep(currentPlayer, landed, true);
 
-            engine.nextTurn();
-
-            Platform.runLater(() -> {
-                if (!checkGameEnd()) {
-                    triggerNextTurn(); // 🚀 handles both AI + human
-                }
-            });
+            finishTurn();
             spinButton.setDisable(false);
         }
     }
@@ -520,68 +498,17 @@ public class GameController {
         return fromIndex + 1;
     }
 
-    private void processStep(Player player, BoardSpace space, boolean isLanding) {
-
-        String color = space.getColor();
-        String action = space.getAction();
-        if (action != null) action = action.trim();
-
-        if (color == null) color = "";
-
-        // 🔴 RED → PASS + LAND
-        if ("Red".equalsIgnoreCase(color)) {
-            System.out.println("Red space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            redHandler.handle(player, space);
-
-            // 👉 Keep claim logic here (important)
-            if ("Accident".equalsIgnoreCase(action)) {
-                handleClaim(player, InsuranceType.AUTO, space.getAmount(), "🚗 Accident");
-            }
-            else if ("Fire".equalsIgnoreCase(action)) {
-                handleClaim(player, InsuranceType.FIRE, space.getAmount(), "🔥 Fire");
-            }
-            else if ("Stock-Crash".equalsIgnoreCase(action)) {
-                handleClaim(player, InsuranceType.STOCK, space.getAmount(), "📉 Stock Crash");
-            }
-        }
-
-        // ⚪ WHITE → LAND ONLY (later)
-        else if ("White".equalsIgnoreCase(color)) {
-            System.out.println("White space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            whiteHandler.collect(space);
-        }
-
-        // 🟡 JUMP → handled later
-        else if ("Jump".equalsIgnoreCase(color)) {
-            System.out.println("Jump space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            if (!isLanding) return;
-            jumpHandler.handle(player, space);
-            return;
-        }
-
-        // 🛑 STOP → handled later
-        else if ("Stop".equalsIgnoreCase(color)) {
-            System.out.println("Stop space: " + (isLanding ? "Landing" : "Passing") + " - Action: " + action);
-            if (!isLanding) return;
-            stopHandler.handle(player, space);
-            return;
-        }
-
-        // ⚪ NORMAL (no color) → LAND ONLY
-        else if (isLanding) {
-            System.out.println("Normal space: Landing - Action: " + action);
-            handleNormal(player, space);
-        }
-
-        //Retirement logic
-        else if ("Retire".equalsIgnoreCase(action)) {
-            handleRetirement(player);
-            return;
-        }
+    private void processStep(
+            Player player,
+            BoardSpace space,
+            boolean isLanding
+    ) {
+        spaceResolver.resolve(player, space, isLanding);
+        dashboard.refresh(players);
     }
 
     private void flushPendingEvents(Player player) {
-        whiteHandler.flush(player);
+        spaceResolver.flush(player);
     }
 
     private void handleClaim(Player player,
