@@ -180,10 +180,7 @@ public class Board {
 
                             stopAnimation();
 
-                            // Notify controller with current space
-                            if (onStep != null) {
-                                onStep.accept(current, 0);
-                            }
+                            token.setCurrentIndex(-1); // 🔥 mark retired/end reached
 
                             if (onFinished != null) {
                                 onFinished.run();

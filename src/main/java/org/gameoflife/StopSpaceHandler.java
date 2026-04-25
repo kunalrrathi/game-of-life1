@@ -330,7 +330,11 @@ public class StopSpaceHandler {
                         + " chose Millionaire path"
         );
 
-        callback.requestSpinForStop();
+        if (player.isComputer()) {
+            callback.requestSpinForStop();   // AI auto spin
+        } else {
+            callback.enableSpin();          // Human manual click
+        }
     }
 
     // =========================================================

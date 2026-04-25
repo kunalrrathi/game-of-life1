@@ -46,6 +46,9 @@ public class GameController {
     private MovementController movementController;
     private SpaceResolver spaceResolver;
 
+    private Player instantWinner;
+    private boolean tycoonWin = false;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -106,6 +109,11 @@ public class GameController {
                             GameController.this.finishTurn();
                         }
                     }
+
+                    @Override
+                    public void handleRetirement(Player p) {
+                        GameController.this.handleRetirement(p);
+                    }
                 }
         );
 
@@ -125,7 +133,11 @@ public class GameController {
 
             @Override
             public void continueMovement(Player player, int steps) {
-                continueMovementAfterStop(player, steps);
+
+                PlayerToken token =
+                        tokens.get(players.indexOf(player));
+
+                movementController.move(player, token, steps);
             }
 
             @Override
@@ -141,6 +153,8 @@ public class GameController {
 
             @Override
             public void endGame(Player winner) {
+                instantWinner = winner;
+                tycoonWin = true;
                 showWinner(winner);
                 spinButton.setDisable(true);
             }
@@ -214,74 +228,9 @@ public class GameController {
         });
     }
 
-    private void startMovement(Player player, PlayerToken token, int steps) {
-
-        board.animateMovement(
-                token,
-                steps,
-
-                // 🔁 STEP CALLBACK
-                (space, remainingSteps) -> handleStep(space, remainingSteps),
-
-                // 🎯 FINAL LANDING
-                () -> handleLanding(token)
-        );
-    }
-
     private void finishTurn() {
         turnManager.finishTurn();
         spinButton.setDisable(false);
-    }
-
-    private void handleStep(BoardSpace space, int remainingSteps) {
-
-        Player player = engine.getCurrentPlayer();
-
-        // 🚨 STOP (highest priority)
-        if ("Stop".equalsIgnoreCase(space.getColor())) {
-
-            System.out.println("STOP encountered → forcing stop");
-
-            board.stopAnimation();
-
-            // 🎯 NEW: process white spaces BEFORE STOP logic
-            flushPendingEvents(player);
-
-            processStep(player, space, true);
-
-            if (!stopHandler.isInProgress()) {
-                endTurn();
-            }
-
-            return;
-        }
-
-        // 🔁 PASS logic
-        processStep(player, space, false);
-
-        // 🔀 Split handling
-        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
-
-            board.stopAnimation();
-
-            Platform.runLater(() ->
-                    handleSplit(space, remainingSteps)
-            );
-        }
-    }
-
-    private void handleLanding(PlayerToken token) {
-
-        Player player = engine.getCurrentPlayer();
-
-        BoardSpace landed = board.getSpace(token.getCurrentIndex());
-
-        processStep(player, landed, true);
-
-        // 🎯 NEW: process all pending white spaces
-        flushPendingEvents(player);
-
-        endTurn();
     }
 
     private void triggerNextTurn() {
@@ -311,177 +260,6 @@ public class GameController {
 
     private void endTurn() {
         finishTurn();
-    }
-
-    private void continueMovementAfterStop(Player player, int steps) {
-
-        PlayerToken token = engine.getCurrentToken();
-
-        // Reset stop flag BEFORE movement resumes
-        stopMovement = false;
-
-        board.animateMovement(
-                token,
-                steps,
-
-                // STEP CALLBACK
-                (space, remainingSteps) -> {
-
-                    // 🚨 STOP again (important for chained stops)
-                    if ("Stop".equalsIgnoreCase(space.getColor())) {
-
-                        board.stopAnimation();
-
-                        // 🎯 NEW
-                        flushPendingEvents(player);
-
-                        processStep(player, space, true);
-
-                        if (!stopHandler.isInProgress()) {
-                            finishTurn();
-                            spinButton.setDisable(false);
-                        }
-
-                        return;
-                    }
-
-                    processStep(player, space, false);
-
-                    if (stopMovement) {
-                        board.stopAnimation();
-                        return;
-                    }
-                },
-
-                // FINAL LANDING
-                () -> {
-                    BoardSpace landed = board.getSpace(token.getCurrentIndex());
-
-                    processStep(player, landed, true);
-
-                    // 🎯 NEW
-                    flushPendingEvents(player);
-
-                    finishTurn();
-                    spinButton.setDisable(false);
-                }
-        );
-    }
-
-    private void handleSplit(BoardSpace space, int remainingSteps) {
-
-        System.out.println("Split space reached! Offering path choices...");
-
-        PlayerToken token = engine.getCurrentToken();
-        Player currentPlayer = engine.getCurrentPlayer();
-
-        // 🧠 Decide path FIRST
-        int nextIndex;
-
-        if (currentPlayer.isComputer()) {
-
-            // 🤖 AI Decision
-            ComputerDecisionEngine decisionEngine = engine.getDecisionEngine();
-
-            boolean chooseUniversity = decisionEngine.chooseUniversityPath(currentPlayer);
-
-            if (chooseUniversity) {
-                nextIndex = findNextByType("Main", space.getIndex());
-                System.out.println(currentPlayer.getName() + " (AI) chose University Route");
-            } else {
-                nextIndex = findNextByType("Shortcut", space.getIndex());
-                System.out.println(currentPlayer.getName() + " (AI) chose Business Route");
-            }
-
-            // 👉 Continue flow directly
-            continueMovementAfterSplit(token, currentPlayer, nextIndex, remainingSteps, space);
-
-        } else {
-
-            // 👤 HUMAN FLOW (existing popup)
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Choose Path");
-            alert.setHeaderText("Select your Career Path");
-            alert.setContentText("Business Route: Faster but less salary\nUniversity Route: Slower but multiple career options");
-
-            ButtonType business = new ButtonType("Business Route");
-            ButtonType university = new ButtonType("University Route");
-
-            alert.getButtonTypes().setAll(business, university);
-
-            alert.showAndWait().ifPresent(choice -> {
-
-                int selectedIndex;
-
-                if (choice == university) {
-                    selectedIndex = findNextByType("Main", space.getIndex());
-                } else {
-                    selectedIndex = findNextByType("Shortcut", space.getIndex());
-                }
-
-                continueMovementAfterSplit(token, currentPlayer, selectedIndex, remainingSteps, space);
-            });
-        }
-    }
-
-    private void continueMovementAfterSplit(
-            PlayerToken token,
-            Player currentPlayer,
-            int nextIndex,
-            int remainingSteps,
-            BoardSpace space
-    ) {
-
-        token.setCurrentIndex(nextIndex);
-
-        BoardSpace next = board.getSpace(nextIndex);
-
-        token.getNode().setLayoutX(next.getX());
-        token.getNode().setLayoutY(next.getY());
-
-        if (remainingSteps > 0) {
-
-            board.animateMovement(
-                    token,
-                    remainingSteps,
-
-                    // 🔁 STEP CALLBACK
-                    (nextSpace, nextRemainingSteps) -> {
-
-                        processStep(currentPlayer, nextSpace, false);
-
-                        if ("Split".equalsIgnoreCase(nextSpace.getSpaceType())) {
-
-                            board.stopAnimation();
-
-                            Platform.runLater(() ->
-                                    handleSplit(nextSpace, nextRemainingSteps)
-                            );
-                        }
-                    },
-
-                    // ✅ FINAL LANDING
-                    () -> {
-                        BoardSpace landed = board.getSpace(token.getCurrentIndex());
-
-                        processStep(currentPlayer, landed, true);
-
-                        flushPendingEvents(currentPlayer);
-
-                        finishTurn();
-                        spinButton.setDisable(false);
-                    }
-            );
-
-        } else {
-
-            BoardSpace landed = board.getSpace(token.getCurrentIndex());
-
-            processStep(currentPlayer, landed, true);
-
-            finishTurn();
-            spinButton.setDisable(false);
-        }
     }
 
     private int findNextByType(String type, int fromIndex) {

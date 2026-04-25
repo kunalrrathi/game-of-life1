@@ -10,6 +10,7 @@ public class MovementController {
         void processStep(Player player, BoardSpace space, boolean isLanding);
         void flushPending(Player player);
         void finishTurn();
+        void handleRetirement(Player player);
     }
 
     private final Board board;
@@ -27,6 +28,11 @@ public class MovementController {
     }
 
     public void move(Player player, PlayerToken token, int steps) {
+
+        if (token.getCurrentIndex() < 0) {
+            callback.finishTurn();
+            return;
+        }
 
         board.animateMovement(
                 token,
@@ -72,6 +78,13 @@ public class MovementController {
     }
 
     private void handleLanding(Player player, PlayerToken token) {
+
+        if (token.getCurrentIndex() == -1) {
+
+            callback.handleRetirement(player);
+            callback.finishTurn();
+            return;
+        }
 
         BoardSpace landed =
                 board.getSpace(token.getCurrentIndex());
