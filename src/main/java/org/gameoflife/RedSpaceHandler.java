@@ -20,27 +20,27 @@ public class RedSpaceHandler {
         switch (action) {
 
             case "PayDay":
-                player.collect(player.getSalary());
+                checkProfessionAndCollectSalary(player);
                 break;
+//                System.out.println("Yay, PayDay !!: " + player.getName() + " receives salary: " + player.getSalary());
+//                player.collect(player.getSalary());
+//                break;
 
-            case "Collect":
+            case "Collect-Red":
                 player.collect(space.getAmount());
                 break;
 
-            case "Pay":
+            case "Pay-Red":
                 player.pay(space.getAmount());
-                break;
-
-            case "Wait-Turn":
-                // future logic
                 break;
 
             case "Business":
                 handleBusiness(player);
                 break;
 
-            case "Accident":
-                // handled via GameController (claim logic)
+            case "Taxes":
+                System.out.println(player.getName() + " pays taxes of Half Salary: ");
+                player.pay(player.getSalary()/2);
                 break;
 
             case "Fire":
@@ -51,6 +51,20 @@ public class RedSpaceHandler {
         }
 
         dashboard.refresh(List.of(player));
+    }
+
+    private void checkProfessionAndCollectSalary(Player player) {
+        if (player.getProfession() == Profession.NONE) {
+
+            System.out.println(player.getName() +
+                    " has no profession, so assigning Profession as UNIVERSITY_DEGREE with salary " + Profession.UNIVERSITY_DEGREE.getSalary());
+            player.setProfession(Profession.UNIVERSITY_DEGREE);
+            player.addCash(Profession.UNIVERSITY_DEGREE.getSalary());
+        } else {
+            System.out.println("Yippee, PayDay !!: " + player.getName() +
+                    " receives salary: " + player.getSalary());
+            player.collect(player.getSalary());
+        }
     }
 
     private void handleBusiness(Player player) {

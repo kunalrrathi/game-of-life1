@@ -35,6 +35,8 @@ public class Player {
 
     private boolean hasStock;
 
+    private int skipTurns = 0;
+
     public void setProfession(Profession profession) {
         this.profession = profession;
         this.salary = profession.getSalary();
@@ -295,5 +297,23 @@ public class Player {
 
     public void setComputer(boolean computer) {
         isComputer = computer;
+    }
+
+    public void setSkipTurns(int turns) {
+        this.skipTurns = turns;
+    }
+
+    public int getSkipTurns() {
+        return skipTurns;
+    }
+
+    public boolean shouldSkipTurn() {
+        return skipTurns > 0;
+    }
+
+    public void reduceSkipTurn() {
+        if (skipTurns > 0) {
+            skipTurns--;
+        }
     }
 }

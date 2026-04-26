@@ -4,6 +4,7 @@ import javafx.animation.Interpolator;
 import javafx.animation.PauseTransition;
 import javafx.animation.RotateTransition;
 import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -11,12 +12,9 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 import javafx.util.Duration;
-
-//import java.applet.AudioClip;
 import java.util.*;
-
-import static utilities.SpinSoundGenerator.playSpinSound;
 
 public class GameController {
 
@@ -38,6 +36,7 @@ public class GameController {
     private RedSpaceHandler redHandler;
     private JumpSpaceHandler jumpHandler;
     private StopSpaceHandler stopHandler;
+    private NormalSpaceHandler normalHandler;
 
     private StackPane spinnerContainer;
 
@@ -48,6 +47,8 @@ public class GameController {
 
     private Player instantWinner;
     private boolean tycoonWin = false;
+
+    private boolean summaryShown = false;
 
     public enum InsuranceType {
         LIFE,
@@ -86,6 +87,11 @@ public class GameController {
                 engine,
                 this::triggerNextTurn,
                 this::checkGameEnd
+        );
+
+        normalHandler = new NormalSpaceHandler(
+                dashboard,
+                spinnerController
         );
 
         movementController = new MovementController(
@@ -164,7 +170,8 @@ public class GameController {
                 whiteHandler,
                 redHandler,
                 jumpHandler,
-                stopHandler
+                stopHandler,
+                normalHandler
         );
 
         // 🟢 Step 8: Layout
@@ -396,56 +403,62 @@ public class GameController {
         return newSpin;
     }
 
-    private void handleNormal(Player player, BoardSpace space) {
-
-        String action = space.getAction();
-
-        if (action == null) return;
-
-        switch (action) {
-
-            case "Collect":
-                player.collect(space.getAmount());
-                break;
-
-            case "Pay":
-                player.pay(space.getAmount());
-                break;
-
-            case "PayDay":
-                player.collect(player.getSalary());
-                System.out.println("PayDay! Collected salary: " + player.getSalary());
-                break;
-
-            case "Spin-Again":
-                return;
-
-            case "Wait-Turn":
-                break;
-        }
-
-        dashboard.refresh(players);
-    }
-
     private boolean checkGameEnd() {
 
+        if (summaryShown) return true;
+
         boolean allFinished = players.stream()
-                .allMatch(p -> p.isBankrupt() || p.isRetired());
+                .allMatch(p ->
+                        p.isBankrupt()
+                                || p.isRetired());
 
-        if (!allFinished) {
-            return false; // ⛔ game still running
-        }
+        if (!allFinished) return false;
 
-        Player winner = players.stream()
-                .max(Comparator.comparingInt(this::calculateFinalWealth))
-                .orElse(null);
+        summaryShown = true;
 
-        showWinner(winner);
+        showGameSummary();
 
-        // 🔥 Existing logic
         updateGameControls();
 
-        return true; // ✅ game ended
+        return true;
+    }
+
+    private void showGameSummary() {
+
+        GameSummaryScreen summary =
+                new GameSummaryScreen(
+                        players,
+                        this::restartGame
+                );
+
+        Stage stage = new Stage();
+
+        stage.setTitle("Game Summary");
+
+        Scene scene =
+                new Scene(summary.getRoot(), 550, 720);
+
+        stage.setScene(scene);
+        stage.show();
+
+        spinButton.setDisable(true);
+    }
+
+    private void restartGame() {
+
+        Stage currentStage =
+                (Stage) root.getScene().getWindow();
+
+        currentStage.close();
+
+        Platform.runLater(() -> {
+
+            try {
+                new Main().start(new Stage());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private int calculateFinalWealth(Player player) {

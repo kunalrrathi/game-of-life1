@@ -11,8 +11,8 @@ public class SpaceResolver {
             WhiteSpaceHandler whiteHandler,
             RedSpaceHandler redHandler,
             JumpSpaceHandler jumpHandler,
-            StopSpaceHandler stopHandler
-    ) {
+            StopSpaceHandler stopHandler,
+            NormalSpaceHandler normalHandler) {
         this.whiteHandler = whiteHandler;
         this.redHandler = redHandler;
         this.jumpHandler = jumpHandler;
