@@ -6,6 +6,7 @@ public class SpaceResolver {
     private final RedSpaceHandler redHandler;
     private final JumpSpaceHandler jumpHandler;
     private final StopSpaceHandler stopHandler;
+    private final NormalSpaceHandler normalHandler;
 
     public SpaceResolver(
             WhiteSpaceHandler whiteHandler,
@@ -17,6 +18,7 @@ public class SpaceResolver {
         this.redHandler = redHandler;
         this.jumpHandler = jumpHandler;
         this.stopHandler = stopHandler;
+        this.normalHandler = normalHandler;
     }
 
     public void resolve(
@@ -57,37 +59,38 @@ public class SpaceResolver {
         }
 
         if (isLanding) {
-            handleNormal(player, space, action);
+            normalHandler.handle(player, space, action);
+//            handleNormal(player, space, action);
         }
     }
 
-    private void handleNormal(
-            Player player,
-            BoardSpace space,
-            String action
-    ) {
-
-        switch (action) {
-
-            case "Collect":
-                player.collect(space.getAmount());
-                break;
-
-            case "Pay":
-                player.pay(space.getAmount());
-                break;
-
-            case "PayDay":
-                player.collect(player.getSalary());
-                break;
-
-            case "Spin-Again":
-                break;
-
-            case "Wait-Turn":
-                break;
-        }
-    }
+//    private void handleNormal(
+//            Player player,
+//            BoardSpace space,
+//            String action
+//    ) {
+//
+//        switch (action) {
+//
+//            case "Collect":
+//                player.collect(space.getAmount());
+//                break;
+//
+//            case "Pay":
+//                player.pay(space.getAmount());
+//                break;
+//
+//            case "PayDay":
+//                player.collect(player.getSalary());
+//                break;
+//
+//            case "Spin-Again":
+//                break;
+//
+//            case "Wait-Turn":
+//                break;
+//        }
+//    }
 
     public void flush(Player player) {
         whiteHandler.flush(player);

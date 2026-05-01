@@ -72,5 +72,16 @@ public class GameEngine {
     public ComputerDecisionEngine getDecisionEngine() {
         return decisionEngine;
     }
+
+    public PlayerToken getTokenForPlayer(Player player) {
+
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i) == player) {
+                return tokens.get(i);
+            }
+        }
+
+        return null; // safety fallback
+    }
 }
 

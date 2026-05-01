@@ -14,7 +14,7 @@ public class StopSpaceHandler {
     public interface StopCallback {
         void enableSpin();
         void continueMovement(Player player, int steps);
-        void requestSpinForStop();
+        void spinForStop(java.util.function.IntConsumer callback);
         void endTurn();
         void endGame(Player winner);
     }
@@ -157,7 +157,7 @@ public class StopSpaceHandler {
 
                 alert.showAndWait();
 
-                callback.enableSpin();
+                callback.spinForStop(nextSpin -> handleSpin(nextSpin));
             });
 
             dashboard.refresh(List.of(marriagePlayer));
@@ -183,36 +183,78 @@ public class StopSpaceHandler {
     // 🎯 MARRIAGE
     // =========================================================
 
+//    private void handleMarriage(Player player) {
+//
+//        player.setMarried(true);
+//
+//        marriagePlayer = player;
+//
+//        marriageStage =
+//                MarriageStage.WAITING_FOR_GIFT_SPIN;
+//
+//        dashboard.refresh(List.of(player));
+//
+//        if (player.isComputer()) {
+//
+//            System.out.println(
+//                    player.getName()
+//                            + " (AI) got married!"
+//            );
+//
+//            PauseTransition delay =
+//                    new PauseTransition(
+//                            Duration.seconds(1)
+//                    );
+//
+//            delay.setOnFinished(
+//                    e -> callback.enableSpin()
+//            );
+//
+//            delay.play();
+//
+//        } else {
+//
+//            Platform.runLater(() -> {
+//
+//                Alert alert =
+//                        new Alert(Alert.AlertType.INFORMATION);
+//
+//                alert.setTitle("💍 Marriage");
+//                alert.setHeaderText(
+//                        player.getName()
+//                                + " got married!"
+//                );
+//
+//                alert.setContentText(
+//                        "Spin again to collect gifts!"
+//                );
+//
+//                alert.showAndWait();
+//
+//                callback.enableSpin();
+//            });
+//        }
+//    }
+
     private void handleMarriage(Player player) {
 
         player.setMarried(true);
 
         marriagePlayer = player;
-
-        marriageStage =
-                MarriageStage.WAITING_FOR_GIFT_SPIN;
+        marriageStage = MarriageStage.WAITING_FOR_GIFT_SPIN;
 
         dashboard.refresh(List.of(player));
 
         if (player.isComputer()) {
 
-            System.out.println(
-                    player.getName()
-                            + " (AI) got married!"
-            );
+            System.out.println(player.getName() + " (AI) got married!");
 
-            PauseTransition delay =
-                    new PauseTransition(
-                            Duration.seconds(1)
-                    );
+//            System.out.println(player.getName() + " got married!");
 
-            delay.setOnFinished(
-                    e -> callback.enableSpin()
-            );
-
-            delay.play();
-
-        } else {
+            // 🎯 DIRECT SPIN (no UI dependency)
+            callback.spinForStop(spin -> handleSpin(spin));
+        }
+        else {
 
             Platform.runLater(() -> {
 
@@ -331,7 +373,7 @@ public class StopSpaceHandler {
         );
 
         if (player.isComputer()) {
-            callback.requestSpinForStop();   // AI auto spin
+            callback.spinForStop(spin -> handleSpin(spin));   // AI auto spin
         } else {
             callback.enableSpin();          // Human manual click
         }
@@ -359,7 +401,7 @@ public class StopSpaceHandler {
 
             waitingForTycoonSpin = true;
 
-            callback.requestSpinForStop();
+            callback.spinForStop(spin -> handleSpin(spin));
 
             return;
         }
@@ -397,7 +439,7 @@ public class StopSpaceHandler {
 
                 waitingForTycoonSpin = true;
 
-                callback.requestSpinForStop();
+                callback.spinForStop(spin -> handleSpin(spin));
             });
         });
     }

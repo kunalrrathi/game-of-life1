@@ -15,6 +15,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import java.util.*;
+import java.util.function.IntConsumer;
 
 public class GameController {
 
@@ -49,6 +50,9 @@ public class GameController {
     private boolean tycoonWin = false;
 
     private boolean summaryShown = false;
+
+    private boolean isDecisionPending = false;
+    private boolean turnAlreadyFinished = false;
 
     public enum InsuranceType {
         LIFE,
@@ -89,11 +93,6 @@ public class GameController {
                 this::checkGameEnd
         );
 
-        normalHandler = new NormalSpaceHandler(
-                dashboard,
-                spinnerController
-        );
-
         movementController = new MovementController(
                 board,
                 engine,
@@ -111,7 +110,7 @@ public class GameController {
 
                     @Override
                     public void finishTurn() {
-                        if (!stopHandler.isInProgress()) {
+                        if (!stopHandler.isInProgress() && !isDecisionPending) {
                             GameController.this.finishTurn();
                         }
                     }
@@ -120,6 +119,18 @@ public class GameController {
                     public void handleRetirement(Player p) {
                         GameController.this.handleRetirement(p);
                     }
+                }
+        );
+
+        normalHandler = new NormalSpaceHandler(
+                dashboard,
+                spinnerController,
+                players,
+                movementController,
+                () -> isDecisionPending = true,
+                () -> {
+                    isDecisionPending = false;
+                    Platform.runLater(this::finishTurn);
                 }
         );
 
@@ -147,8 +158,8 @@ public class GameController {
             }
 
             @Override
-            public void requestSpinForStop() {
-                handleSpinClick();
+            public void spinForStop(IntConsumer callback) {
+                spinnerController.spin(callback);
             }
 
             @Override
@@ -235,9 +246,17 @@ public class GameController {
         });
     }
 
-    private void finishTurn() {
+    public void finishTurn() {
+
+        if (turnAlreadyFinished) return;
+
+        turnAlreadyFinished = true;
+
         turnManager.finishTurn();
-        spinButton.setDisable(false);
+
+        Platform.runLater(() -> {
+            turnAlreadyFinished = false;
+        });
     }
 
     private void triggerNextTurn() {
@@ -263,6 +282,7 @@ public class GameController {
         } else {
             spinButton.setDisable(false); // human plays
         }
+        turnAlreadyFinished = false;
     }
 
     private void endTurn() {

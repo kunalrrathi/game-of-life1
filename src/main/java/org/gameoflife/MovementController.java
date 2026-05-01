@@ -186,4 +186,12 @@ public class MovementController {
 
         return fromIndex + 1;
     }
+
+    public PlayerToken getTokenForPlayer(Player player) {
+        return engine.getTokenForPlayer(player);
+    }
+
+    public Board getBoard() {
+        return board;
+    }
 }
