@@ -54,6 +54,10 @@ public class GameController {
     private boolean isDecisionPending = false;
     private boolean turnAlreadyFinished = false;
 
+    private Runnable onDecisionStart;
+    private Runnable onDecisionEnd;
+    private boolean gameEnded = false;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -170,6 +174,7 @@ public class GameController {
 
             @Override
             public void endGame(Player winner) {
+                gameEnded = true;
                 instantWinner = winner;
                 tycoonWin = true;
                 showWinner(winner);
@@ -189,6 +194,9 @@ public class GameController {
         root.setCenter(board.getBoardPane());
         root.setRight(dashboard.getPanel());
 //        root.setBottom(new HBox(10, spinButton));
+
+        onDecisionStart = () -> turnManager.setDecisionPending(true);
+        onDecisionEnd   = () -> turnManager.setDecisionPending(false);
     }
 
     // =========================================================
@@ -231,12 +239,19 @@ public class GameController {
 
     private void handleSpinClick() {
 
+        if (gameEnded) return;
+
         Player player = engine.getCurrentPlayer();
         PlayerToken token = engine.getCurrentToken();
 
         spinnerController.spin(steps -> {
 
             System.out.println(player.getName() + " Spun: " + steps);
+
+            // 🔥 APPLY LUCKY NUMBER RULE HERE
+            if (!stopHandler.isInProgress()) {
+                applyLuckyNumberRule(player, steps);
+            }
 
             if (stopHandler.isInProgress()) {
                 stopHandler.handleSpin(steps);
@@ -247,6 +262,8 @@ public class GameController {
     }
 
     public void finishTurn() {
+
+        if (isDecisionPending || gameEnded) return;
 
         if (turnAlreadyFinished) return;
 
@@ -260,6 +277,8 @@ public class GameController {
     }
 
     private void triggerNextTurn() {
+
+        if (gameEnded) return;
 
         Player currentPlayer = engine.getCurrentPlayer();
 
@@ -355,52 +374,107 @@ public class GameController {
 
     private void handleRetirement(Player player) {
 
-        if (player.isRetired()) return; // 🔥 IMPORTANT
+        if (player.isRetired()) return;
 
         System.out.println(player.getName() + " reached MILLIONAIRE!");
 
-        // 🏆 First player bonus
+        // 🏆 First Millionaire
         if (!engine.hasMillionaire()) {
 
             engine.setFirstMillionaire(player);
 
             player.collect(240000);
 
-            int lucky = spinWheel();
+            // 🔥 BLOCK TURN FLOW HERE
+            onDecisionStart.run();
 
-            engine.setLuckyNumber(lucky);
+            if (player.isComputer()) {
 
-            if(!player.isComputer())
-                showPopup("🏆 First Millionaire!",
-                        player.getName() + " gets ₹240000 bonus!\nLucky Number: " + lucky);
+                int lucky = new Random().nextInt(10) + 1;
+
+                engine.setLuckyNumber(lucky);
+
+                System.out.println(player.getName() +
+                        " chose Lucky Number: " + lucky);
+
+                // 🔓 RELEASE TURN
+                onDecisionEnd.run();
+
+            } else {
+
+                Platform.runLater(() -> {
+
+                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                    alert.setTitle("Choose Lucky Number");
+                    alert.setHeaderText("Pick your Lucky Number (1–10)");
+
+                    List<ButtonType> buttons = new ArrayList<>();
+
+                    for (int i = 1; i <= 10; i++) {
+                        buttons.add(new ButtonType(String.valueOf(i)));
+                    }
+
+                    alert.getButtonTypes().setAll(buttons);
+
+                    alert.showAndWait().ifPresent(choice -> {
+
+                        int lucky = Integer.parseInt(choice.getText());
+
+                        engine.setLuckyNumber(lucky);
+
+                        showPopup("🏆 First Millionaire!",
+                                player.getName() +
+                                        " gets ₹240000 bonus!\nLucky Number: " + lucky);
+
+                        // 🔓 RELEASE TURN AFTER USER DECISION
+                        onDecisionEnd.run();
+
+                        finishTurn();
+                    });
+                });
+            }
 
         } else {
-            if (!player.isComputer())
+
+            if (!player.isComputer()) {
                 showPopup("🎉 Millionaire",
                         player.getName() + " reached Millionaire!");
+            }
         }
+
         player.setRetired(true);
+
         dashboard.refresh(players);
     }
 
     private void applyLuckyNumberRule(Player currentPlayer, int spin) {
 
         Player millionaire = engine.getFirstMillionaire();
-        Integer lucky = engine.getLuckyNumber();
+        int lucky = engine.getLuckyNumber();
 
-        if (millionaire == null || lucky == null) return;
+        if (millionaire == null || lucky == -1) return;
 
-        // Do not apply to the millionaire themselves
         if (currentPlayer == millionaire) return;
 
         if (spin == lucky) {
 
             currentPlayer.pay(24000);
             millionaire.collect(24000);
-            if (!currentPlayer.isComputer())
+
+            System.out.println(
+                    currentPlayer.getName() +
+                            " hit Lucky Number " + lucky +
+                            " → paid ₹24000 to " + millionaire.getName()
+            );
+
+            if (!currentPlayer.isComputer()) {
                 showPopup("🎯 Lucky Number!",
-                        currentPlayer.getName() + " hit " + lucky +
+                        currentPlayer.getName() +
+                                " hit " + lucky +
                                 "\nPaid ₹24000 to " + millionaire.getName());
+            }
+
+            dashboard.refresh(players);
         }
     }
 

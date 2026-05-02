@@ -11,6 +11,8 @@ public class TurnManager {
     private final Supplier<Boolean> checkGameEnd;
     int safety = 0;
 
+    private boolean isDecisionPending = false;
+
     public TurnManager(
             GameEngine engine,
             Runnable triggerNextTurn,
@@ -23,9 +25,14 @@ public class TurnManager {
 
     public void finishTurn() {
 
+        // 🔒 BLOCK turn progression while a decision dialog is open
+        if (isDecisionPending) return;
+
         engine.nextTurn();
 
         Player current = engine.getCurrentPlayer();
+
+        int safety = 0; // make sure this exists
 
         // 🔥 Handle skipped turns
         while (current.shouldSkipTurn() && safety < 10) {
@@ -36,6 +43,8 @@ public class TurnManager {
 
             engine.nextTurn();
             current = engine.getCurrentPlayer();
+
+            safety++;
         }
 
         Platform.runLater(() -> {
@@ -43,5 +52,9 @@ public class TurnManager {
                 triggerNextTurn.run();
             }
         });
+    }
+
+    public void setDecisionPending(boolean value) {
+        this.isDecisionPending = value;
     }
 }

@@ -43,6 +43,9 @@ public class StopSpaceHandler {
     private Player tycoonPlayer;
     private int chosenTycoonNumber;
 
+    private boolean waitingForReckoningSpin = false;
+    private Player currentStopPlayer;
+
     public StopSpaceHandler(
             PlayersDashboard dashboard,
             StopCallback callback
@@ -99,14 +102,19 @@ public class StopSpaceHandler {
 
             if (spin == chosenTycoonNumber) {
 
+                waitingForTycoonSpin = false;
+
+                System.out.println(tycoonPlayer.getName() + " became TYCOON!");
+
                 showResult(
                         "🎉 TYCOON!",
-                        tycoonPlayer.getName()
-                                + " becomes the WINNER!"
+                        tycoonPlayer.getName() + " becomes the WINNER!"
                 );
 
+                // 🔥 END GAME COMPLETELY
                 callback.endGame(tycoonPlayer);
 
+                return;
             } else {
 
                 tycoonPlayer.setCash(0);
@@ -130,37 +138,42 @@ public class StopSpaceHandler {
         // -----------------------------------------------------
         // MARRIAGE GIFT SPIN
         // -----------------------------------------------------
-        if (marriageStage
-                == MarriageStage.WAITING_FOR_GIFT_SPIN) {
+        if (marriageStage == MarriageStage.WAITING_FOR_GIFT_SPIN) {
 
             int gift = getMarriageGiftAmount(spin);
 
             marriagePlayer.collect(gift);
 
-            marriageStage =
-                    MarriageStage.WAITING_FOR_HONEYMOON_SPIN;
-
-            Platform.runLater(() -> {
-
-                Alert alert =
-                        new Alert(Alert.AlertType.INFORMATION);
-
-                alert.setTitle("🎁 Wedding Gifts");
-                alert.setHeaderText(
-                        "You spun: " + spin
-                );
-
-                alert.setContentText(
-                        "You received ₹" + gift
-                                + "\n\nSpin again for honeymoon!"
-                );
-
-                alert.showAndWait();
-
-                callback.spinForStop(nextSpin -> handleSpin(nextSpin));
-            });
+            marriageStage = MarriageStage.WAITING_FOR_HONEYMOON_SPIN;
 
             dashboard.refresh(List.of(marriagePlayer));
+
+            if (marriagePlayer.isComputer()) {
+
+                // 🤖 AI → NO popup, continue immediately
+                callback.spinForStop(nextSpin -> handleSpin(nextSpin));
+
+            } else {
+
+                // 👤 Human → show popup, then spin again
+                Platform.runLater(() -> {
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+                    alert.setTitle("🎁 Wedding Gifts");
+                    alert.setHeaderText("You spun: " + spin);
+
+                    alert.setContentText(
+                            "You received ₹" + gift +
+                                    "\n\nSpin again for honeymoon!"
+                    );
+
+                    alert.showAndWait();
+
+                    callback.spinForStop(nextSpin -> handleSpin(nextSpin));
+                });
+            }
+
             return;
         }
 
@@ -176,6 +189,18 @@ public class StopSpaceHandler {
                     marriagePlayer,
                     spin
             );
+        }
+
+        // -----------------------------------------------------
+        // RECKONING → CONTINUE MOVEMENT
+        // -----------------------------------------------------
+        if (waitingForReckoningSpin) {
+
+            waitingForReckoningSpin = false;
+
+            callback.continueMovement(currentStopPlayer, spin);
+
+            return;
         }
     }
 
@@ -248,8 +273,6 @@ public class StopSpaceHandler {
         if (player.isComputer()) {
 
             System.out.println(player.getName() + " (AI) got married!");
-
-//            System.out.println(player.getName() + " got married!");
 
             // 🎯 DIRECT SPIN (no UI dependency)
             callback.spinForStop(spin -> handleSpin(spin));
@@ -367,15 +390,15 @@ public class StopSpaceHandler {
 
     private void handleMillionairePath(Player player) {
 
-        System.out.println(
-                player.getName()
-                        + " chose Millionaire path"
-        );
+        System.out.println(player.getName() + " chose Millionaire path");
+
+        currentStopPlayer = player;
+        waitingForReckoningSpin = true;
 
         if (player.isComputer()) {
-            callback.spinForStop(spin -> handleSpin(spin));   // AI auto spin
+            callback.spinForStop(spin -> handleSpin(spin));
         } else {
-            callback.enableSpin();          // Human manual click
+            callback.enableSpin();
         }
     }
 

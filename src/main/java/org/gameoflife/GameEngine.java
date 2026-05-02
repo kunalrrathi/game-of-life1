@@ -10,7 +10,7 @@ public class GameEngine {
     private List<PlayerToken> tokens;
 
     private Player firstMillionaire = null;
-    private Integer luckyNumber = null;
+    private int luckyNumber = -1;
 
     private int currentPlayerIndex = 0;
 
@@ -61,12 +61,12 @@ public class GameEngine {
         this.firstMillionaire = player;
     }
 
-    public Integer getLuckyNumber() {
+    public int getLuckyNumber() {
         return luckyNumber;
     }
 
-    public void setLuckyNumber(int number) {
-        this.luckyNumber = number;
+    public void setLuckyNumber(int luckyNumber) {
+        this.luckyNumber = luckyNumber;
     }
 
     public ComputerDecisionEngine getDecisionEngine() {
