@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import java.util.*;
 import java.util.function.IntConsumer;
+import static utilities.LogColors.*;
 
 public class GameController {
 
@@ -58,6 +59,8 @@ public class GameController {
     private Runnable onDecisionEnd;
     private boolean gameEnded = false;
 
+    private GameLogPanel logPanel;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -77,6 +80,8 @@ public class GameController {
         board = new Board();
         this.spinnerContainer = board.getSpinnerContainer();
         spinnerController = new SpinnerController(spinnerContainer);
+
+        logPanel = new GameLogPanel();
 
         // 🟢 Step 3: Dashboard
         dashboard = new PlayersDashboard();
@@ -135,16 +140,17 @@ public class GameController {
                 () -> {
                     isDecisionPending = false;
                     Platform.runLater(this::finishTurn);
-                }
+                },
+                logPanel
         );
 
         // 🟢 Step 6: Controls
         setupControls();
 
         // 🟢 Step 7: Initialize Handlers
-        whiteHandler = new WhiteSpaceHandler(board, dashboard, engine);
-        redHandler = new RedSpaceHandler(dashboard);
-        jumpHandler = new JumpSpaceHandler(board, engine, dashboard);
+        whiteHandler = new WhiteSpaceHandler(board, dashboard, engine, logPanel);
+        redHandler = new RedSpaceHandler(dashboard, logPanel);
+        jumpHandler = new JumpSpaceHandler(board, engine, dashboard, logPanel);
         stopHandler = new StopSpaceHandler(dashboard, new StopSpaceHandler.StopCallback() {
 
             @Override
@@ -180,7 +186,7 @@ public class GameController {
                 showWinner(winner);
                 spinButton.setDisable(true);
             }
-        });
+        }, logPanel);
 
         spaceResolver = new SpaceResolver(
                 whiteHandler,
@@ -193,7 +199,16 @@ public class GameController {
         // 🟢 Step 8: Layout
         root.setCenter(board.getBoardPane());
         root.setRight(dashboard.getPanel());
-//        root.setBottom(new HBox(10, spinButton));
+
+        HBox bottomWrapper = new HBox();
+        bottomWrapper.getChildren().add(logPanel.getView());
+
+        // 🔥 restrict width
+        bottomWrapper.setMaxWidth(800);
+
+        root.setBottom(bottomWrapper);
+        //        root.setBottom(logPanel.getView());
+
 
         onDecisionStart = () -> turnManager.setDecisionPending(true);
         onDecisionEnd   = () -> turnManager.setDecisionPending(false);
@@ -394,8 +409,8 @@ public class GameController {
 
                 engine.setLuckyNumber(lucky);
 
-                System.out.println(player.getName() +
-                        " chose Lucky Number: " + lucky);
+                logPanel.log(player.getName() +
+                        " chose Lucky Number: " + lucky, EVENT);
 
                 // 🔓 RELEASE TURN
                 onDecisionEnd.run();
@@ -461,10 +476,11 @@ public class GameController {
             currentPlayer.pay(24000);
             millionaire.collect(24000);
 
-            System.out.println(
+            logPanel.log(
                     currentPlayer.getName() +
                             " hit Lucky Number " + lucky +
-                            " → paid ₹24000 to " + millionaire.getName()
+                            " → paid ₹24000 to " + millionaire.getName(),
+                    PAY
             );
 
             if (!currentPlayer.isComputer()) {
@@ -493,7 +509,7 @@ public class GameController {
 
     private int spinWheel() {
         int newSpin = new Random().nextInt(10) + 1;
-        System.out.println("Spin result: " + newSpin);
+        logPanel.log("Spin result**********************: " + newSpin, INFO);
         return newSpin;
     }
 

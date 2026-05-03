@@ -5,6 +5,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 
 import java.util.*;
+import static utilities.LogColors.*;
 
 public class WhiteSpaceHandler {
 
@@ -14,6 +15,7 @@ public class WhiteSpaceHandler {
     private PlayersDashboard dashboard;
     private Board board;
     private GameEngine engine;
+    private GameLogPanel logPanel;
 
     public enum InsuranceType {
         LIFE,
@@ -22,10 +24,11 @@ public class WhiteSpaceHandler {
         STOCK
     }
 
-    public WhiteSpaceHandler(Board board, PlayersDashboard dashboard, GameEngine engine) {
+    public WhiteSpaceHandler(Board board, PlayersDashboard dashboard, GameEngine engine, GameLogPanel logPanel) {
         this.board = board;
         this.dashboard = dashboard;
         this.engine = engine;
+        this.logPanel = logPanel;
     }
 
     // =========================================================
@@ -134,9 +137,9 @@ public class WhiteSpaceHandler {
                 player.pay(amount);
                 setInsurance(player, type, true);
 
-                System.out.println(player.getName() + " (AI) bought " + type + " insurance");
+                logPanel.log(player.getName() + " (AI) bought " + type + " insurance", INFO);
             } else {
-                System.out.println(player.getName() + " (AI) skipped " + type + " insurance");
+                logPanel.log(player.getName() + " (AI) skipped " + type + " insurance", INFO);
             }
 
             return; // 🚨 VERY IMPORTANT → prevents popup
@@ -159,7 +162,7 @@ public class WhiteSpaceHandler {
             player.pay(amount);
             setInsurance(player, type, true);
 
-            System.out.println(player.getName() + " bought " + type + " insurance");
+            logPanel.log(player.getName() + " bought " + type + " insurance", INFO);
         }
     }
 
@@ -194,7 +197,7 @@ public class WhiteSpaceHandler {
     private void handlePlayMarket(Player player) {
 
         if (!player.hasStock()) {
-            System.out.println(player.getName() + " has no stock → cannot play market");
+            logPanel.log(player.getName() + " has no stock → cannot play market", INFO);
             return;
         }
 
@@ -213,7 +216,7 @@ public class WhiteSpaceHandler {
         if (result.isPresent() && result.get() == play) {
 
             int spin = new Random().nextInt(10) + 1;
-            System.out.println("Market Spin: " + spin);
+            logPanel.log("Market Spin: " + spin, EVENT);
 
             if (spin <= 3) {
                 player.pay(60000);

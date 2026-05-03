@@ -1,15 +1,17 @@
 package org.gameoflife;
 
-import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.util.Duration;
 
 import java.util.List;
 import java.util.Random;
+import static utilities.LogColors.*;
+
 
 public class StopSpaceHandler {
+
+    private GameLogPanel logPanel;
 
     public interface StopCallback {
         void enableSpin();
@@ -48,10 +50,11 @@ public class StopSpaceHandler {
 
     public StopSpaceHandler(
             PlayersDashboard dashboard,
-            StopCallback callback
-    ) {
+            StopCallback callback,
+            GameLogPanel logPanel) {
         this.dashboard = dashboard;
         this.callback = callback;
+        this.logPanel = logPanel;
     }
 
     // =========================================================
@@ -104,7 +107,7 @@ public class StopSpaceHandler {
 
                 waitingForTycoonSpin = false;
 
-                System.out.println(tycoonPlayer.getName() + " became TYCOON!");
+                logPanel.log(tycoonPlayer.getName() + " became TYCOON!", WIN);
 
                 showResult(
                         "🎉 TYCOON!",
@@ -207,60 +210,6 @@ public class StopSpaceHandler {
     // =========================================================
     // 🎯 MARRIAGE
     // =========================================================
-
-//    private void handleMarriage(Player player) {
-//
-//        player.setMarried(true);
-//
-//        marriagePlayer = player;
-//
-//        marriageStage =
-//                MarriageStage.WAITING_FOR_GIFT_SPIN;
-//
-//        dashboard.refresh(List.of(player));
-//
-//        if (player.isComputer()) {
-//
-//            System.out.println(
-//                    player.getName()
-//                            + " (AI) got married!"
-//            );
-//
-//            PauseTransition delay =
-//                    new PauseTransition(
-//                            Duration.seconds(1)
-//                    );
-//
-//            delay.setOnFinished(
-//                    e -> callback.enableSpin()
-//            );
-//
-//            delay.play();
-//
-//        } else {
-//
-//            Platform.runLater(() -> {
-//
-//                Alert alert =
-//                        new Alert(Alert.AlertType.INFORMATION);
-//
-//                alert.setTitle("💍 Marriage");
-//                alert.setHeaderText(
-//                        player.getName()
-//                                + " got married!"
-//                );
-//
-//                alert.setContentText(
-//                        "Spin again to collect gifts!"
-//                );
-//
-//                alert.showAndWait();
-//
-//                callback.enableSpin();
-//            });
-//        }
-//    }
-
     private void handleMarriage(Player player) {
 
         player.setMarried(true);
@@ -272,7 +221,7 @@ public class StopSpaceHandler {
 
         if (player.isComputer()) {
 
-            System.out.println(player.getName() + " (AI) got married!");
+            logPanel.log(player.getName() + " (AI) got married!", EVENT);
 
             // 🎯 DIRECT SPIN (no UI dependency)
             callback.spinForStop(spin -> handleSpin(spin));
@@ -315,7 +264,7 @@ public class StopSpaceHandler {
 
     private void handleReckoning(Player player) {
 
-        System.out.println("DAY OF RECKONING!");
+        logPanel.log("DAY OF RECKONING!", EVENT);
 
         // 1️⃣ Pay promissory notes
         player.settleLoansAtRetirement();
@@ -390,7 +339,7 @@ public class StopSpaceHandler {
 
     private void handleMillionairePath(Player player) {
 
-        System.out.println(player.getName() + " chose Millionaire path");
+        logPanel.log(player.getName() + " chose Millionaire path", EVENT);
 
         currentStopPlayer = player;
         waitingForReckoningSpin = true;
@@ -416,10 +365,11 @@ public class StopSpaceHandler {
             chosenTycoonNumber =
                     new Random().nextInt(10) + 1;
 
-            System.out.println(
+            logPanel.log(
                     player.getName()
                             + " chose number "
-                            + chosenTycoonNumber
+                            + chosenTycoonNumber,
+                    INFO
             );
 
             waitingForTycoonSpin = true;

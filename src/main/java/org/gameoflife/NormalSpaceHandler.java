@@ -7,6 +7,7 @@ import javafx.scene.control.ButtonType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import static utilities.LogColors.*;
 
 public class NormalSpaceHandler {
 
@@ -16,6 +17,7 @@ public class NormalSpaceHandler {
     private final MovementController movementController;
     private final Runnable onDecisionStart;
     private final Runnable onDecisionEnd;
+    private GameLogPanel logPanel;
 
     public NormalSpaceHandler(
             PlayersDashboard dashboard,
@@ -23,14 +25,15 @@ public class NormalSpaceHandler {
             List<Player> players,
             MovementController movementController,
             Runnable onDecisionStart,
-            Runnable onDecisionEnd
-    ) {
+            Runnable onDecisionEnd,
+            GameLogPanel logPanel) {
         this.dashboard = dashboard;
         this.spinnerController = spinnerController;
         this.players = players;
         this.movementController = movementController;
         this.onDecisionStart = onDecisionStart;
         this.onDecisionEnd = onDecisionEnd;
+        this.logPanel = logPanel;
     }
 
     public void handle(Player player, BoardSpace space, String action) {
@@ -43,48 +46,55 @@ public class NormalSpaceHandler {
 
             case "Collect":
                 player.collect(space.getAmount());
+                logPanel.log(player.getName() + ": Collect: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), COLLECT);
                 break;
 
             case "Pay":
                 player.pay(space.getAmount());
+                logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 break;
 
             case "Collect-Life":
                 if (player.isLifeInsurance()) {
                     player.collect(space.getAmount());
+                    logPanel.log(player.getName() + ": Collect: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), COLLECT);
                 }
                 break;
 
             case "Collect-Stock":
                 if (player.hasStockInsurance()) {
                     player.collect(space.getAmount());
+                    logPanel.log(player.getName() + ": Collect: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), COLLECT);
                 } else
-                    System.out.println(player.getName() + " has no Stock Insurance, so no collection.");
+                    logPanel.log(player.getName() + " has no Stock Insurance, so no collection.", INFO);
                 break;
 
             case "Pay-Car":
                 if (!player.hasAutoInsurance()) {
                     player.pay(space.getAmount());
+                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
-                    System.out.println(player.getName() + " has Auto Insurance, so no payment needed.");
+                    logPanel.log(player.getName() + " has Auto Insurance, so no payment needed.", INFO);
                 break;
 
             case "Pay-Fire":
                 if (!player.hasFireInsurance()) {
                     player.pay(space.getAmount());
+                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
-                    System.out.println(player.getName() + " has Fire Insurance, so no payment needed.");
+                    logPanel.log(player.getName() + " has Fire Insurance, so no payment needed.", INFO);
                 break;
 
             case "Pay-Stock":
                 if (player.hasStockInsurance()) {
                     player.pay(space.getAmount());
+                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
-                    System.out.println(player.getName() + " has Stock Insurance, so no payment needed.");
+                    logPanel.log(player.getName() + " has Stock Insurance, so no payment needed.", INFO);
                 break;
 
             case "Wait-Turn":
-                System.out.println(player.getName() + " loses next turn.");
+                logPanel.log(player.getName() + " loses next turn.", EVENT);
                 player.setSkipTurns(1);
                 break;
 
@@ -121,6 +131,10 @@ public class NormalSpaceHandler {
             case "Detour":
                 System.out.println("Detour logic pending...");
                 break;
+
+            case "Loose-Fire":
+                System.out.println("Loose Fire logic pending...");
+                break;
         }
 
         dashboard.refresh(List.of(player));
@@ -134,11 +148,12 @@ public class NormalSpaceHandler {
 
         int amountPerOpponent = count * 1000;
 
-        System.out.println(
+        logPanel.log(
                 "👶 " + player.getName() +
                         " had " + (count == 1 ? "a child" : "twins") +
                         " and collected ₹" + amountPerOpponent +
-                        " from each player"
+                        " from each player",
+                EVENT
         );
 
         for (Player p : players) {
@@ -147,6 +162,7 @@ public class NormalSpaceHandler {
 
             p.pay(amountPerOpponent);
             player.collect(amountPerOpponent);
+            logPanel.log(player.getName() + ": Collect: " + amountPerOpponent + " | Remaining Cash: " + player.getCash(), COLLECT);
         }
 
         dashboard.refresh(players);
@@ -230,7 +246,7 @@ public class NormalSpaceHandler {
         target.pay(200000);
         attacker.collect(200000);
 
-        System.out.println(attacker.getName() + " took ₹200000 from " + target.getName());
+        logPanel.log(attacker.getName() + " took ₹200000 from " + target.getName(), COLLECT);
 
         dashboard.refresh(players);
     }
@@ -238,7 +254,7 @@ public class NormalSpaceHandler {
     private void sendBack(Player target) {
         onDecisionEnd.run();
 
-        System.out.println(target.getName() + " is sent back 10 spaces!");
+        logPanel.log(target.getName() + " is sent back 10 spaces!", EVENT);
 
         PlayerToken token =
                 movementController.getTokenForPlayer(target);
@@ -259,7 +275,7 @@ public class NormalSpaceHandler {
 
         player.collect(20000);
 
-        System.out.println(player.getName() + " landed on Lucky Day and received ₹20000");
+        logPanel.log(player.getName() + " landed on Lucky Day and received ₹20000", WIN);
 
         onDecisionStart.run();
 
@@ -349,21 +365,21 @@ public class NormalSpaceHandler {
 
     private void performLuckySpin(Player player, int n1, int n2) {
 
-        System.out.println(player.getName() + " is betting on " + n1 + " & " + n2);
+        logPanel.log(player.getName() + " is betting on " + n1 + " & " + n2, EVENT);
 
         spinnerController.spin(result -> {
 
-            System.out.println("Lucky Spin result: " + result);
+            logPanel.log("Lucky Spin result: " + result, EVENT);
 
             if (result == n1 || result == n2) {
 
                 player.collect(300000);
 
-                System.out.println("🎉 Lucky Win! ₹300000");
+                logPanel.log("🎉 Lucky Win! ₹300000", WIN);
 
             } else {
 
-                System.out.println("No win in Lucky Day.");
+                logPanel.log("No win in Lucky Day.", INFO);
             }
 
             dashboard.refresh(players);

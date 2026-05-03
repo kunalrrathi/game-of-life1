@@ -4,17 +4,20 @@ import javafx.application.Platform;
 import javafx.scene.control.Alert;
 
 import java.util.List;
+import static utilities.LogColors.*;
 
 public class JumpSpaceHandler {
 
     private Board board;
     private GameEngine engine;
     private PlayersDashboard dashboard;
+    private GameLogPanel logPanel;
 
-    public JumpSpaceHandler(Board board, GameEngine engine, PlayersDashboard dashboard) {
+    public JumpSpaceHandler(Board board, GameEngine engine, PlayersDashboard dashboard, GameLogPanel logPanel) {
         this.board = board;
         this.engine = engine;
         this.dashboard = dashboard;
+        this.logPanel = logPanel;
     }
 
     public void handle(Player player, BoardSpace space) {
@@ -38,9 +41,10 @@ public class JumpSpaceHandler {
             player.setProfession(profession);
             player.addCash(profession.getSalary());
 
-            System.out.println(player.getName() +
+            logPanel.log(player.getName() +
                     " chose career: " + profession +
-                    " | Salary: " + profession.getSalary());
+                    " | Salary: " + profession.getSalary(),
+                    INFO);
 
             // 🎉 Popup
             if (!player.isComputer()) {
@@ -54,9 +58,10 @@ public class JumpSpaceHandler {
                     alert.showAndWait();
                 });
             } else {
-                System.out.println(player.getName() +
+                logPanel.log(player.getName() +
                         " (AI) is now a " + profession +
-                        " | Salary: " + profession.getSalary());
+                        " | Salary: " + profession.getSalary(),
+                        INFO);
             }
         }
 

@@ -1,13 +1,16 @@
 package org.gameoflife;
 
 import java.util.List;
+import static utilities.LogColors.*;
 
 public class RedSpaceHandler {
 
     private PlayersDashboard dashboard;
+    private GameLogPanel logPanel;
 
-    public RedSpaceHandler(PlayersDashboard dashboard) {
+    public RedSpaceHandler(PlayersDashboard dashboard, GameLogPanel logPanel) {
         this.dashboard = dashboard;
+        this.logPanel = logPanel;
     }
 
     public void handle(Player player, BoardSpace space) {
@@ -22,16 +25,15 @@ public class RedSpaceHandler {
             case "PayDay":
                 checkProfessionAndCollectSalary(player);
                 break;
-//                System.out.println("Yay, PayDay !!: " + player.getName() + " receives salary: " + player.getSalary());
-//                player.collect(player.getSalary());
-//                break;
 
             case "Collect-Red":
                 player.collect(space.getAmount());
+                logPanel.log(player.getName() + ": Collect: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), COLLECT);
                 break;
 
             case "Pay-Red":
                 player.pay(space.getAmount());
+                logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 break;
 
             case "Business":
@@ -39,14 +41,9 @@ public class RedSpaceHandler {
                 break;
 
             case "Taxes":
-                System.out.println(player.getName() + " pays taxes of Half Salary: ");
+                logPanel.log(player.getName() + " pays taxes of Half Salary: ", PAY);
                 player.pay(player.getSalary()/2);
-                break;
-
-            case "Fire":
-                break;
-
-            case "Stock-Crash":
+                logPanel.log(player.getName() + ": Paid: " + player.getSalary()/2 + " | Remaining Cash: " + player.getCash(), PAY);
                 break;
         }
 
@@ -56,13 +53,13 @@ public class RedSpaceHandler {
     private void checkProfessionAndCollectSalary(Player player) {
         if (player.getProfession() == Profession.NONE) {
 
-            System.out.println(player.getName() +
-                    " has no profession, so assigning Profession as UNIVERSITY_DEGREE with salary " + Profession.UNIVERSITY_DEGREE.getSalary());
+            logPanel.log(player.getName() +
+                    " has no profession, so assigning Profession as UNIVERSITY_DEGREE with salary " + Profession.UNIVERSITY_DEGREE.getSalary(), INFO);
             player.setProfession(Profession.UNIVERSITY_DEGREE);
             player.addCash(Profession.UNIVERSITY_DEGREE.getSalary());
         } else {
-            System.out.println("Yippee, PayDay !!: " + player.getName() +
-                    " receives salary: " + player.getSalary());
+            logPanel.log("Yippee, PayDay !!: " + player.getName() +
+                    " receives salary: " + player.getSalary(), COLLECT);
             player.collect(player.getSalary());
         }
     }
@@ -74,8 +71,8 @@ public class RedSpaceHandler {
             player.setProfession(Profession.BUSINESS);
             player.addCash(Profession.BUSINESS.getSalary());
 
-            System.out.println(player.getName() +
-                    " profession set to BUSINESS with salary " + player.getSalary());
+            logPanel.log(player.getName() +
+                    " profession set to BUSINESS with salary " + player.getSalary(), INFO);
 
         } else {
 
