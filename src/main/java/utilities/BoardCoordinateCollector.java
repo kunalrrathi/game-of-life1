@@ -1,4 +1,4 @@
-package org.gameoflife;
+package utilities;
 
 import javafx.application.Application;
 import javafx.scene.Scene;

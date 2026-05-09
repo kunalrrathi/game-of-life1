@@ -5,4 +5,5 @@ module org.gameoflife {
     requires javafx.media;
 
     exports org.gameoflife;
+    exports utilities;
 }

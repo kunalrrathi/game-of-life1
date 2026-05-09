@@ -10,9 +10,10 @@ public class Main extends Application {
     public void start(Stage stage) {
         GameController controller = new GameController();
 
-        Scene scene = new Scene(controller.getRoot(), 1000, 800);
+        Scene scene = new Scene(controller.getRoot(), 1400, 1000);
         stage.setTitle("Game of Life - JavaFX");
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
     }
 

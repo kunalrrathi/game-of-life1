@@ -61,6 +61,8 @@ public class GameController {
 
     private GameLogPanel logPanel;
 
+    private PlayerToken activeToken;
+
     public enum InsuranceType {
         LIFE,
         AUTO,
@@ -199,15 +201,7 @@ public class GameController {
         // 🟢 Step 8: Layout
         root.setCenter(board.getBoardPane());
         root.setRight(dashboard.getPanel());
-
-        HBox bottomWrapper = new HBox();
-        bottomWrapper.getChildren().add(logPanel.getView());
-
-        // 🔥 restrict width
-        bottomWrapper.setMaxWidth(800);
-
-        root.setBottom(bottomWrapper);
-        //        root.setBottom(logPanel.getView());
+        root.setBottom(logPanel.getView());
 
 
         onDecisionStart = () -> turnManager.setDecisionPending(true);
@@ -259,6 +253,10 @@ public class GameController {
         Player player = engine.getCurrentPlayer();
         PlayerToken token = engine.getCurrentToken();
 
+        // 🔥 Start pulse for current player
+        activeToken = token;
+        board.startActiveTokenPulse(token);
+
         spinnerController.spin(steps -> {
 
             System.out.println(player.getName() + " Spun: " + steps);
@@ -294,6 +292,13 @@ public class GameController {
     private void triggerNextTurn() {
 
         if (gameEnded) return;
+
+        // 🔥 Stop previous active pulse
+        if (activeToken != null) {
+            board.stopActiveTokenPulse(activeToken);
+        }
+
+        board.pulseToken(engine.getCurrentToken());
 
         Player currentPlayer = engine.getCurrentPlayer();
 
