@@ -1,5 +1,6 @@
 package org.gameoflife;
 
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class Player {
@@ -13,6 +14,7 @@ public class Player {
 
     private int position = 0;
     private Circle token;
+    private Color color;
 
     private int cash;   // starting money
 
@@ -44,6 +46,10 @@ public class Player {
 
     public Profession getProfession() {
         return profession;
+    }
+
+    public String getProfessionDisplayName() {
+        return profession.getDisplayName();
     }
 
     public int getSalary() {
@@ -315,5 +321,9 @@ public class Player {
         if (skipTurns > 0) {
             skipTurns--;
         }
+    }
+
+    public Color getColor() {
+        return (Color) token.getFill();
     }
 }

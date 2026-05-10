@@ -1,6 +1,10 @@
 package org.gameoflife;
 
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
@@ -8,28 +12,40 @@ import java.util.List;
 
 public class PlayersDashboard {
 
-    private VBox panel;
+    private final TilePane root;
+    private final ScrollPane scrollPane;
 
     private List<PlayerCard> playerCards;
 
+    private List<Player> players;
+
     public PlayersDashboard() {
 
-        panel = new VBox(15);
-        panel.setPadding(new Insets(10));
-        panel.setPrefWidth(240);
+        root = new TilePane();
+        root.setHgap(15);
+        root.setVgap(15);
+        root.setPadding(new Insets(10));
+        root.setPrefColumns(2);
+        root.setTileAlignment(Pos.TOP_LEFT);
 
-        panel.setStyle("-fx-background-color: #f4f4f4;");
+        scrollPane = new ScrollPane(root);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(
+                ScrollPane.ScrollBarPolicy.NEVER
+        );
+        scrollPane.setPrefWidth(420);
 
         playerCards = new ArrayList<>();
+        players = new ArrayList<>();
     }
 
-    public void addPlayer(String name) {
+    public void addPlayer(Player player, PlayerToken token) {
 
-        PlayerCard card = new PlayerCard(name);
+        PlayerCard card = new PlayerCard(player, token);
 
         playerCards.add(card);
 
-        panel.getChildren().add(card.getCard());
+        root.getChildren().add(card.getCard());
     }
 
     public void refresh(List<Player> players) {
@@ -43,7 +59,18 @@ public class PlayersDashboard {
         }
     }
 
-    public VBox getPanel() {
-        return panel;
+    public Node getView() {
+        return scrollPane;
+    }
+
+    public void setActivePlayer(Player activePlayer) {
+
+        for (PlayerCard card : playerCards) {
+
+            boolean active =
+                    card.getPlayer() == activePlayer;
+
+            card.setActive(active);
+        }
     }
 }

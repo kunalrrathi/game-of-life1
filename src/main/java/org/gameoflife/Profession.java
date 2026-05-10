@@ -20,4 +20,17 @@ public enum Profession {
     public int getSalary() {
         return salary;
     }
+
+    public String getDisplayName() {
+        return switch (this) {
+            case BUSINESS -> "Businessmen";
+            case DOCTOR -> "Doctor";
+            case LAWYER -> "Lawyer";
+            case JOURNALIST -> "Journalist";
+            case TEACHER -> "Teacher";
+            case PHYSICIST -> "Physicist";
+            case UNIVERSITY_DEGREE -> "University Dropout";
+            default -> "Unemployed";
+        };
+    }
 }

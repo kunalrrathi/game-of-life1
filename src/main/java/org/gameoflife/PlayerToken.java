@@ -8,6 +8,7 @@ public class PlayerToken {
     private Circle token;
     private Player player;
     private int currentIndex = 0;
+    Color color;
 
     public PlayerToken(Player player, Color color) {
 
@@ -16,6 +17,8 @@ public class PlayerToken {
         token = new Circle(10);
         token.setFill(color);
         token.setStroke(Color.BLACK);
+
+        this.color = color;
     }
 
     public Circle getNode() {
@@ -32,5 +35,9 @@ public class PlayerToken {
 
     public void setCurrentIndex(int index) {
         this.currentIndex = index;
+    }
+
+    public Color getColor() {
+        return color;
     }
 }

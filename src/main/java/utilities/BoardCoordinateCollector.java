@@ -18,12 +18,12 @@ public class BoardCoordinateCollector extends Application {
 
         // Load board image
         ImageView boardImage = new ImageView(
-                new Image(getClass().getResource("/life_board.png").toExternalForm())
+                new Image(getClass().getResource("/org/gameoflife/life_board.jpg").toExternalForm())
         );
 
         // Fix board size so coordinates remain stable
-        boardImage.setFitWidth(1000);
-        boardImage.setPreserveRatio(true);
+        boardImage.setFitWidth(1400);
+        boardImage.setFitHeight(980);
 
         boardPane.getChildren().add(boardImage);
 

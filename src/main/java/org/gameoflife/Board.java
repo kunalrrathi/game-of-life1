@@ -53,8 +53,9 @@ public class Board {
                 new Image(getClass().getResource("/org/gameoflife/life_board.jpg").toExternalForm())
         );
 
-        boardImage.setFitWidth(800);
-        boardImage.setPreserveRatio(true);
+        boardImage.setFitWidth(1400);
+        boardImage.setFitHeight(980);
+//        boardImage.setPreserveRatio(true);
 
         boardPane.getChildren().add(boardImage);
 
@@ -99,11 +100,11 @@ public class Board {
                 new Image(getClass().getResource("/org/gameoflife/spinner.png").toExternalForm())
         );
 
-        spinnerBase.setFitWidth(300);
-        spinnerBase.setFitHeight(300);
+        spinnerBase.setFitWidth(370);
+        spinnerBase.setFitHeight(370);
 
-        spinnerBase.setLayoutX(220);
-        spinnerBase.setLayoutY(180);
+        spinnerBase.setLayoutX(280);
+        spinnerBase.setLayoutY(340);
 
         // Add to board
         boardPane.getChildren().add(spinnerBase);
@@ -116,12 +117,12 @@ public class Board {
                 new Image(getClass().getResource("/org/gameoflife/arrow.png").toExternalForm())
         );
 
-        spinnerArrow.setFitWidth(80);
-        spinnerArrow.setFitHeight(80);
+        spinnerArrow.setFitWidth(100);
+        spinnerArrow.setFitHeight(100);
 
         // Position container
-        spinnerContainer.setLayoutX(330);
-        spinnerContainer.setLayoutY(280);
+        spinnerContainer.setLayoutX(415);
+        spinnerContainer.setLayoutY(460);
 
         spinnerContainer.getChildren().add(spinnerArrow);
 
@@ -421,5 +422,9 @@ public class Board {
 
         token.getNode().setScaleX(1.0);
         token.getNode().setScaleY(1.0);
+    }
+
+    public Pane getView() {
+        return boardPane;
     }
 }

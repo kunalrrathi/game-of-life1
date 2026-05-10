@@ -4,6 +4,7 @@ import javafx.animation.Interpolator;
 import javafx.animation.PauseTransition;
 import javafx.animation.RotateTransition;
 import javafx.application.Platform;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -21,6 +22,8 @@ import static utilities.LogColors.*;
 public class GameController {
 
     private BorderPane root;
+    private MainGameLayout layout;
+    private Scene scene;
 
     private Board board;
     private List<Player> players;
@@ -72,7 +75,7 @@ public class GameController {
 
     public GameController() {
 
-        root = new BorderPane();
+//        root = new BorderPane();
 
 
         // 🟢 Step 1: Setup dialog
@@ -85,15 +88,18 @@ public class GameController {
 
         logPanel = new GameLogPanel();
 
+
         // 🟢 Step 3: Dashboard
         dashboard = new PlayersDashboard();
 
-        for (Player p : players) {
-            dashboard.addPlayer(p.getName());
-        }
+        createTokens();
+
+//        for (Player p : players) {
+//            dashboard.addPlayer(p);
+//        }
 
         // 🟢 Step 4: Tokens
-        createTokens();
+//        createTokens();
 
         // 🟢 Step 5: Engine
         engine = new GameEngine(board, players, tokens);
@@ -199,9 +205,12 @@ public class GameController {
         );
 
         // 🟢 Step 8: Layout
-        root.setCenter(board.getBoardPane());
-        root.setRight(dashboard.getPanel());
-        root.setBottom(logPanel.getView());
+        layout =
+                new MainGameLayout(
+                        board.getView(),
+                        dashboard.getView(),
+                        logPanel.getView()
+                );
 
 
         onDecisionStart = () -> turnManager.setDecisionPending(true);
@@ -230,6 +239,7 @@ public class GameController {
 
             tokens.add(token);
             board.addToken(token);
+            dashboard.addPlayer(players.get(i), token);
         }
 
         // Place all tokens at START (index 0)
@@ -302,25 +312,32 @@ public class GameController {
 
         Player currentPlayer = engine.getCurrentPlayer();
 
+        // 🔥 Highlight active player card
+        dashboard.setActivePlayer(currentPlayer);
+
         if (currentPlayer.isComputer()) {
 
             System.out.println(currentPlayer.getName() + " (AI) is taking turn...");
 
-            spinButton.setDisable(true); // prevent manual click
+            spinButton.setDisable(true);
 
-            PauseTransition delay = new PauseTransition(Duration.seconds(1.2));
+            PauseTransition delay =
+                    new PauseTransition(Duration.seconds(1.2));
 
             delay.setOnFinished(e -> {
-                spinButton.setDisable(false); // 🔥 CRITICAL FIX
-                spinButton.setDisable(false); // 🔥 CRITICAL FIX
-                Platform.runLater(() -> handleSpinClick());            // AI Turn Logic
+
+                spinButton.setDisable(false);
+
+                Platform.runLater(() -> handleSpinClick());
             });
 
             delay.play();
 
         } else {
-            spinButton.setDisable(false); // human plays
+
+            spinButton.setDisable(false);
         }
+
         turnAlreadyFinished = false;
     }
 
@@ -633,7 +650,11 @@ public class GameController {
     // 🎯 ROOT
     // =========================================================
 
-    public BorderPane getRoot() {
-        return root;
+//    public BorderPane getRoot() {
+//        return root;
+//    }
+
+    public Parent getRoot() {
+        return layout.getRoot();
     }
 }
