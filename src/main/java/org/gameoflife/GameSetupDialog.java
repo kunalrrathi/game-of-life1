@@ -7,21 +7,30 @@ import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 public class GameSetupDialog {
 
-    private static final String[] AI_NAMES = {
-            "Neha 🤖",
-            "Nikhil 🤖",
-            "Nitya 🤖",
-            "Sharayu 🤖",
-            "Mummyji 🤖",
-            "Papaji 🤖"
-    };
+    private static final List<String> AI_NAMES =
+            new ArrayList<>(List.of(
+                "Neha 🤖",
+                "Nikhil 🤖",
+                "Nitya 🤖",
+                "Sharayu 🤖",
+                "Mummyji 🤖",
+                "Papaji 🤖"
+            ));
 
     private static String getRandomAIName() {
-        int index = new java.util.Random().nextInt(AI_NAMES.length);
-        return AI_NAMES[index];
+
+        if (AI_NAMES.isEmpty()) {
+            return "Computer 🤖";
+        }
+
+        int index =
+                new Random().nextInt(AI_NAMES.size());
+
+        return AI_NAMES.remove(index);
     }
 
     public static List<Player> showDialog() {

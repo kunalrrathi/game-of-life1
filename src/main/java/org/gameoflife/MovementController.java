@@ -68,12 +68,26 @@ public class MovementController {
         callback.processStep(player, space, false);
 
         // SPLIT
-        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
+//        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
+//
+//            board.stopAnimation();
+//
+//            Platform.runLater(() ->
+//                    handleSplit(player, token, space, remainingSteps));
+//        }
+        switch (space.getSpaceType()) {
 
-            board.stopAnimation();
+            case "Split":
+                board.stopAnimation();
+                Platform.runLater(() ->
+                        handleCareerSplit(player, token, space, remainingSteps));
+                break;
 
-            Platform.runLater(() ->
-                    handleSplit(player, token, space, remainingSteps));
+            case "Split1":
+                board.stopAnimation();
+                Platform.runLater(() ->
+                        handleGenericSplit(player, token, space, remainingSteps));
+                break;
         }
     }
 
@@ -96,7 +110,7 @@ public class MovementController {
         callback.finishTurn();
     }
 
-    private void handleSplit(
+    private void handleCareerSplit(
             Player player,
             PlayerToken token,
             BoardSpace space,
@@ -147,6 +161,164 @@ public class MovementController {
                 nextIndex,
                 remainingSteps
         );
+    }
+
+    private void handleGenericSplit(
+            Player player,
+            PlayerToken token,
+            BoardSpace splitSpace,
+            int remainingSteps
+    ) {
+
+        // --------------------------------------------------
+        // Find both branch starting points
+        // --------------------------------------------------
+
+        int path1Start =
+                splitSpace.getNextIndex();
+
+        int path2Start =
+                splitSpace.getBranch();
+
+        // --------------------------------------------------
+        // Calculate final destinations
+        // --------------------------------------------------
+
+        int destination1 =
+                moveForward(path1Start, remainingSteps);
+        System.out.println("Destination if taking Path 1: " + destination1);
+
+        int destination2 =
+                moveForward(path2Start, remainingSteps);
+        System.out.println("Destination if taking Path 2: " + destination2);
+
+        BoardSpace space1 =
+                board.getSpace(destination1);
+
+        BoardSpace space2 =
+                board.getSpace(destination2);
+
+        String option1 =
+                describeSpace(space1);
+
+        String option2 =
+                describeSpace(space2);
+
+        // --------------------------------------------------
+        // AI CHOICE
+        // --------------------------------------------------
+
+        if (player.isComputer()) {
+
+            int chosen =
+                    Math.random() < 0.5
+                            ? destination1
+                            : destination2;
+
+            continueAfterSplit(
+                    player,
+                    token,
+                    chosen,
+                    0
+            );
+
+            return;
+        }
+
+        // --------------------------------------------------
+        // HUMAN CHOICE
+        // --------------------------------------------------
+
+        Alert alert =
+                new Alert(Alert.AlertType.CONFIRMATION);
+
+        alert.setTitle("Choose Your Path");
+
+        alert.setHeaderText(
+                "Select your route"
+        );
+
+        ButtonType path1Btn =
+                new ButtonType(option1);
+
+        ButtonType path2Btn =
+                new ButtonType(option2);
+
+        alert.getButtonTypes().setAll(
+                path1Btn,
+                path2Btn
+        );
+
+        ButtonType result =
+                alert.showAndWait()
+                        .orElse(path1Btn);
+
+        int chosenDestination =
+                result == path1Btn
+                        ? destination1
+                        : destination2;
+
+        continueAfterSplit(
+                player,
+                token,
+                chosenDestination,
+                0
+        );
+    }
+
+    private int moveForward(
+            int startIndex,
+            int steps
+    ) {
+
+        int current = startIndex;
+
+        for (int i = 0; i < steps; i++) {
+
+            BoardSpace currentSpace =
+                    board.getSpace(current);
+
+            current =
+                    currentSpace.getNextIndex();
+        }
+
+        return current;
+    }
+
+    private String describeSpace(BoardSpace s) {
+
+        String action = s.getAction();
+
+        if (action == null) {
+            return "Continue";
+        }
+
+        switch (action) {
+
+            case "Collect":
+                return "💰 Collect ₹" + s.getAmount();
+
+            case "Pay":
+                return "💸 Pay ₹" + s.getAmount();
+
+            case "Child":
+                return "👶 Child is born";
+
+            case "Twins":
+                return "👶👶 Twins";
+
+            case "Revenge":
+                return "😈 Revenge";
+
+            case "Lucky-Day":
+                return "🍀 Lucky Day";
+
+            default:
+                if(s.getAmount() > 0)
+                    return action + " (₹" + s.getAmount() + ")";
+                else
+                    return action;
+        }
     }
 
     private void continueAfterSplit(

@@ -53,7 +53,7 @@ Index,C1,C2,Color,Action,Amount,SpaceType,nextIndex,Branch
 51,725,190,,Twins,,Main,52,
 52,740,131,Red,Taxes,,Main,53,
 53,795,96,White,Pay-Stock-Insurance,50000,Main,54,
-54,878,91,,Child,,Split,55,62
+54,878,91,,Child,,Split1,55,62
 55,958,86,,Collect-Spin-the-Wheel,1000,Shortcut,56,
 56,1039,78,,Child,,Shortcut,57,
 57,1119,82,,Collect,2800000,Shortcut,58,
@@ -90,7 +90,7 @@ Index,C1,C2,Color,Action,Amount,SpaceType,nextIndex,Branch
 88,792,852,,Revenge,,Main,89,
 89,789,791,,Loose-Auto,,Main,90,
 90,792,741,,Collect,100000,Main,91,
-91,792,678,,Twins,,Split,92,100
+91,792,678,,Twins,,Split1,92,100
 92,790,618,,Pay,100000,Main,93,
 93,791,566,Red,PayDay,,Main,94,
 94,790,519,,Collect-Life,60000,Main,95,

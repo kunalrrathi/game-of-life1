@@ -70,22 +70,6 @@ public class BoardSpace {
         return branch;
     }
 
-    public boolean isRedSpace() {
-        return "Red".equalsIgnoreCase(color);
-    }
-
-    public boolean hasBranch() {
-        return branch != null;
-    }
-
-    public boolean isSplit() {
-        return "Split".equalsIgnoreCase(path);
-    }
-
-    public boolean isMerge() {
-        return "Merge".equalsIgnoreCase(path);
-    }
-
     public String getSpaceType() {
         return spaceType;
     }
