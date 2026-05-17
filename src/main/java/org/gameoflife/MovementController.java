@@ -64,17 +64,16 @@ public class MovementController {
             return;
         }
 
+        // --------------------------------------------------
         // PASSING
-        callback.processStep(player, space, false);
+        // Do NOT process final landing space here
+        // --------------------------------------------------
+
+        if (remainingSteps > 0) {
+            callback.processStep(player, space, false);
+        }
 
         // SPLIT
-//        if ("Split".equalsIgnoreCase(space.getSpaceType())) {
-//
-//            board.stopAnimation();
-//
-//            Platform.runLater(() ->
-//                    handleSplit(player, token, space, remainingSteps));
-//        }
         switch (space.getSpaceType()) {
 
             case "Split":
@@ -181,22 +180,21 @@ public class MovementController {
                 splitSpace.getBranch();
 
         // --------------------------------------------------
-        // Calculate final destinations
+        // Calculate preview destinations
+        // (ONLY for popup display)
         // --------------------------------------------------
 
-        int destination1 =
+        int preview1 =
                 moveForward(path1Start, remainingSteps);
-        System.out.println("Destination if taking Path 1: " + destination1);
 
-        int destination2 =
+        int preview2 =
                 moveForward(path2Start, remainingSteps);
-        System.out.println("Destination if taking Path 2: " + destination2);
 
         BoardSpace space1 =
-                board.getSpace(destination1);
+                board.getSpace(preview1);
 
         BoardSpace space2 =
-                board.getSpace(destination2);
+                board.getSpace(preview2);
 
         String option1 =
                 describeSpace(space1);
@@ -210,16 +208,17 @@ public class MovementController {
 
         if (player.isComputer()) {
 
-            int chosen =
+            int chosenPathStart =
                     Math.random() < 0.5
-                            ? destination1
-                            : destination2;
+                            ? path1Start
+                            : path2Start;
 
-            continueAfterSplit(
+            token.setCurrentIndex(chosenPathStart);
+
+            move(
                     player,
                     token,
-                    chosen,
-                    0
+                    remainingSteps
             );
 
             return;
@@ -253,16 +252,17 @@ public class MovementController {
                 alert.showAndWait()
                         .orElse(path1Btn);
 
-        int chosenDestination =
+        int chosenPathStart =
                 result == path1Btn
-                        ? destination1
-                        : destination2;
+                        ? path1Start
+                        : path2Start;
 
-        continueAfterSplit(
+        token.setCurrentIndex(chosenPathStart);
+
+        move(
                 player,
                 token,
-                chosenDestination,
-                0
+                remainingSteps
         );
     }
 
