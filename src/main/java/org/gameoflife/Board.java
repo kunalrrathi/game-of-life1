@@ -227,7 +227,7 @@ public class Board {
                         token.getNode().setLayoutX(space.getX());
                         token.getNode().setLayoutY(space.getY());
 
-                        int remainingSteps = steps - (step + 1);
+                        int remainingSteps = steps - step;
 
                         Color trailColor =
                                 (Color) token.getNode().getFill();

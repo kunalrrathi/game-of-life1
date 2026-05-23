@@ -9,8 +9,8 @@ import static utilities.LogColors.*;
 
 public class WhiteSpaceHandler {
 
-    private Set<Integer> pendingWhiteSpaceIndexes = new LinkedHashSet<>();
-    private Queue<Runnable> whiteEventQueue = new LinkedList<>();
+//    private Set<Integer> pendingWhiteSpaceIndexes = new LinkedHashSet<>();
+//    private Queue<Runnable> whiteEventQueue = new LinkedList<>();
 
     private PlayersDashboard dashboard;
     private Board board;
@@ -35,51 +35,54 @@ public class WhiteSpaceHandler {
     // 🎯 COLLECT WHITE SPACES
     // =========================================================
 
-    public void collect(BoardSpace space) {
-        pendingWhiteSpaceIndexes.add(space.getIndex());
-    }
+//    public void collect(BoardSpace space) {
+//        pendingWhiteSpaceIndexes.add(space.getIndex());
+//    }
 
     // =========================================================
     // 🎯 PROCESS WHITE SPACES
     // =========================================================
 
-    public void flush(Player player) {
+//    public void flush(Player player) {
+//
+//        if (pendingWhiteSpaceIndexes.isEmpty()) return;
+//
+//        System.out.println("Processing White Spaces...");
+//
+//        for (Integer index : pendingWhiteSpaceIndexes) {
+//
+//            BoardSpace space = board.getSpace(index);
+//
+//            whiteEventQueue.add(() -> handleWhite(player, space));
+//        }
+//
+//        pendingWhiteSpaceIndexes.clear();
+//
+//        processQueue();
+//    }
 
-        if (pendingWhiteSpaceIndexes.isEmpty()) return;
-
-        System.out.println("Processing White Spaces...");
-
-        for (Integer index : pendingWhiteSpaceIndexes) {
-
-            BoardSpace space = board.getSpace(index);
-
-            whiteEventQueue.add(() -> handleWhite(player, space));
-        }
-
-        pendingWhiteSpaceIndexes.clear();
-
-        processQueue();
-    }
-
-    private void processQueue() {
-
-        if (whiteEventQueue.isEmpty()) return;
-
-        Runnable task = whiteEventQueue.poll();
-
-        Platform.runLater(() -> {
-            task.run();
-            processQueue();
-        });
-    }
+//    private void processQueue() {
+//
+//        if (whiteEventQueue.isEmpty()) return;
+//
+//        Runnable task = whiteEventQueue.poll();
+//
+//        Platform.runLater(() -> {
+//            task.run();
+//            processQueue();
+//        });
+//    }
 
     // =========================================================
     // 🎯 WHITE ACTION HANDLER
     // =========================================================
 
-    private void handleWhite(Player player, BoardSpace space) {
+    public void handle(Player player, BoardSpace space) {
 
         String action = space.getAction();
+
+        System.out.println("Resolving White Space Action: " + action);
+
         if (action != null) action = action.trim();
 
         int amount = space.getAmount();

@@ -21,7 +21,7 @@ public class SpinnerController {
 
     public void spin(IntConsumer callback) {
 
-        int steps = 2; //new Random().nextInt(10) + 1;
+        int steps = 4; //new Random().nextInt(10) + 1;
 
         spinnerContainer.setDisable(true);
 

@@ -30,15 +30,13 @@ public class SpaceResolver {
         String color = safe(space.getColor());
         String action = safe(space.getAction());
 
-        if ("Red".equalsIgnoreCase(color)) {
-
-            redHandler.handle(player, space);
+        if ("White".equalsIgnoreCase(color)) {
+            whiteHandler.handle(player, space);
             return;
         }
 
-        if ("White".equalsIgnoreCase(color)) {
-
-            whiteHandler.collect(space);
+        if ("Red".equalsIgnoreCase(color)) {
+            redHandler.handle(player, space);
             return;
         }
 
@@ -92,9 +90,9 @@ public class SpaceResolver {
 //        }
 //    }
 
-    public void flush(Player player) {
-        whiteHandler.flush(player);
-    }
+//    public void flush(Player player) {
+//        whiteHandler.flush(player);
+//    }
 
     private String safe(String s) {
         return s == null ? "" : s.trim();

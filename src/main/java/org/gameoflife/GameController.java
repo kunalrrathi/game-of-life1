@@ -76,17 +76,17 @@ public class GameController {
     public GameController() {
 
 //        root = new BorderPane();
-
+        logPanel = new GameLogPanel();
 
         // 🟢 Step 1: Setup dialog
-        players = GameSetupDialog.showDialog();
+        players = GameSetupDialog.showDialog(logPanel);
 
         // 🟢 Step 2: Board
         board = new Board();
         this.spinnerContainer = board.getSpinnerContainer();
         spinnerController = new SpinnerController(spinnerContainer);
 
-        logPanel = new GameLogPanel();
+
 
 
         // 🟢 Step 3: Dashboard
@@ -369,7 +369,7 @@ public class GameController {
     }
 
     private void flushPendingEvents(Player player) {
-        spaceResolver.flush(player);
+//        spaceResolver.flush(player);
     }
 
     private void handleClaim(Player player,

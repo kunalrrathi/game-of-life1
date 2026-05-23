@@ -52,41 +52,114 @@ public class MovementController {
             int remainingSteps
     ) {
 
-        // STOP
+        boolean isFinalSpace =
+                remainingSteps == 0;
+
+        // =====================================================
+        // STOP SPACE
+        // Stop immediately when reached
+        // =====================================================
+
         if ("Stop".equalsIgnoreCase(space.getColor())) {
 
             board.stopAnimation();
 
-            callback.flushPending(player);
-
-            callback.processStep(player, space, true);
+            callback.processStep(
+                    player,
+                    space,
+                    true
+            );
 
             return;
         }
 
-        // --------------------------------------------------
-        // PASSING
-        // Do NOT process final landing space here
-        // --------------------------------------------------
+        // =====================================================
+        // SPLIT SPACES
+        // Only trigger on landing
+        // =====================================================
 
-        if (remainingSteps > 0) {
-            callback.processStep(player, space, false);
+        if (!isFinalSpace) {
+
+            // =====================================================
+            // SPLIT SPACES
+            // Trigger immediately when reached
+            // =====================================================
+
+            switch (space.getSpaceType()) {
+
+                case "Split":
+
+                    board.stopAnimation();
+
+                    Platform.runLater(() ->
+                            handleCareerSplit(
+                                    player,
+                                    token,
+                                    space,
+                                    remainingSteps
+                            ));
+
+                    return;
+
+                case "Split1":
+
+                    board.stopAnimation();
+
+                    Platform.runLater(() ->
+                            handleGenericSplit(
+                                    player,
+                                    token,
+                                    space,
+                                    remainingSteps
+                            ));
+
+                    return;
+            }
         }
 
-        // SPLIT
-        switch (space.getSpaceType()) {
+        // =====================================================
+        // PASS EVENTS
+        // Skip final landing space
+        // =====================================================
 
-            case "Split":
-                board.stopAnimation();
-                Platform.runLater(() ->
-                        handleCareerSplit(player, token, space, remainingSteps));
-                break;
+        if (!isFinalSpace) {
 
-            case "Split1":
+            // -------------------------------------------------
+            // INTERACTIVE WHITE SPACE
+            // Pause → Decision → Resume
+            // -------------------------------------------------
+
+            if (isInteractiveWhite(space)) {
+
                 board.stopAnimation();
-                Platform.runLater(() ->
-                        handleGenericSplit(player, token, space, remainingSteps));
-                break;
+
+                Platform.runLater(() -> {
+
+                    callback.processStep(
+                            player,
+                            space,
+                            true
+                    );
+
+                    move(
+                            player,
+                            token,
+                            remainingSteps
+                    );
+                });
+
+                return;
+            }
+
+            // -------------------------------------------------
+            // NORMAL PASS PROCESSING
+            // -------------------------------------------------
+
+            callback.processStep(
+                    player,
+                    space,
+                    false
+            );
         }
     }
 
@@ -104,7 +177,7 @@ public class MovementController {
 
         callback.processStep(player, landed, true);
 
-        callback.flushPending(player);
+//        callback.flushPending(player);
 
         callback.finishTurn();
     }
@@ -357,6 +430,26 @@ public class MovementController {
         }
 
         return fromIndex + 1;
+    }
+
+    private boolean isInteractiveWhite(BoardSpace space) {
+
+        if (!"White".equalsIgnoreCase(space.getColor())) {
+            return false;
+        }
+
+        String action = space.getAction();
+
+        return switch (action) {
+
+            case "Pay-Life-Insurance",
+                 "Pay-Auto-Insurance",
+                 "Pay-Fire-Insurance",
+                 "Pay-Stock-Insurance",
+                 "Play-Market" -> true;
+
+            default -> false;
+        };
     }
 
     public PlayerToken getTokenForPlayer(Player player) {

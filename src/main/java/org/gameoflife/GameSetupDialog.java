@@ -33,7 +33,7 @@ public class GameSetupDialog {
         return AI_NAMES.remove(index);
     }
 
-    public static List<Player> showDialog() {
+    public static List<Player> showDialog(GameLogPanel logPanel) {
 
         Dialog<List<Player>> dialog = new Dialog<>();
         dialog.setTitle("Game Setup");
@@ -140,6 +140,7 @@ public class GameSetupDialog {
                     if (row.insuranceCheckBox.isSelected()) {
                         p.setAutoInsurance(true);
                         p.pay(1000);
+                        logPanel.log(name + " bought car insurance for $1000");
                     }
 
                     // 🤖 Computer Player
