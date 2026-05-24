@@ -72,7 +72,7 @@ public class NormalSpaceHandler {
             case "Pay-Car":
                 if (!player.hasAutoInsurance()) {
                     player.pay(space.getAmount());
-                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
+                    logPanel.log("No Auto Insurance: " + player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
                     logPanel.log(player.getName() + " has Auto Insurance, so no payment needed.", INFO);
                 break;
@@ -80,7 +80,7 @@ public class NormalSpaceHandler {
             case "Pay-Fire":
                 if (!player.hasFireInsurance()) {
                     player.pay(space.getAmount());
-                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
+                    logPanel.log("No Fire Insurance: " + player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
                     logPanel.log(player.getName() + " has Fire Insurance, so no payment needed.", INFO);
                 break;
@@ -88,9 +88,9 @@ public class NormalSpaceHandler {
             case "Pay-Stock":
                 if (player.hasStockInsurance()) {
                     player.pay(space.getAmount());
-                    logPanel.log(player.getName() + ": Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
+                    logPanel.log(player.getName() + " has Stock Insurance: Paid: " + space.getAmount() + " | Remaining Cash: " + player.getCash(), PAY);
                 } else
-                    logPanel.log(player.getName() + " has Stock Insurance, so no payment needed.", INFO);
+                    logPanel.log(player.getName() + " does not have Stock Insurance, so no payment needed.", INFO);
                 break;
 
             case "Wait-Turn":

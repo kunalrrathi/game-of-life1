@@ -265,11 +265,53 @@ public class GameController {
 
         // 🔥 Start pulse for current player
         activeToken = token;
+
         board.startActiveTokenPulse(token);
 
         spinnerController.spin(steps -> {
 
             System.out.println(player.getName() + " Spun: " + steps);
+
+            // =====================================================
+            // WAITING FOR SPLIT CHOICE
+            // =====================================================
+
+            if (player.isWaitingForSplitChoice()) {
+
+                player.setWaitingForSplitChoice(false);
+
+                BoardSpace current =
+                        board.getSpace(token.getCurrentIndex());
+
+                switch (current.getSpaceType()) {
+
+                    case "Split":
+
+                        Platform.runLater(() ->
+                                movementController.handleCareerSplit(
+                                        player,
+                                        token,
+                                        current,
+                                        steps
+                                )
+                        );
+
+                        return;
+
+                    case "Split1":
+
+                        Platform.runLater(() ->
+                                movementController.handleGenericSplit(
+                                        player,
+                                        token,
+                                        current,
+                                        steps
+                                )
+                        );
+
+                        return;
+                }
+            }
 
             // 🔥 APPLY LUCKY NUMBER RULE HERE
             if (!stopHandler.isInProgress()) {
@@ -277,9 +319,16 @@ public class GameController {
             }
 
             if (stopHandler.isInProgress()) {
+
                 stopHandler.handleSpin(steps);
+
             } else {
-                movementController.move(player, token, steps);
+
+                movementController.move(
+                        player,
+                        token,
+                        steps
+                );
             }
         });
     }

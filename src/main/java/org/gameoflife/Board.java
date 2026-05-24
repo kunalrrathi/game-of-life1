@@ -197,9 +197,21 @@ public class Board {
                     Duration.millis(300 * step),
                     e -> {
 
-                        BoardSpace current = getSpace(token.getCurrentIndex());
+                        BoardSpace current =
+                                getSpace(token.getCurrentIndex());
 
-                        int nextIndex = current.getNextIndex();
+                        int nextIndex;
+
+                        if (token.getForcedNextIndex() != null) {
+
+                            nextIndex = token.getForcedNextIndex();
+
+                            token.setForcedNextIndex(null);
+
+                        } else {
+
+                            nextIndex = current.getNextIndex();
+                        }
 
                         // 🎯 HANDLE END OF BOARD (Retire)
                         if (nextIndex < 0) {

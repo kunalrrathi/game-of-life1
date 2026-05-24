@@ -10,6 +10,8 @@ public class PlayerToken {
     private int currentIndex = 0;
     Color color;
 
+    private Integer forcedNextIndex;
+
     public PlayerToken(Player player, Color color) {
 
         this.player = player;
@@ -39,5 +41,13 @@ public class PlayerToken {
 
     public Color getColor() {
         return color;
+    }
+
+    public Integer getForcedNextIndex() {
+        return forcedNextIndex;
+    }
+
+    public void setForcedNextIndex(Integer forcedNextIndex) {
+        this.forcedNextIndex = forcedNextIndex;
     }
 }

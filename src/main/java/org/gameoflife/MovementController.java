@@ -73,49 +73,49 @@ public class MovementController {
             return;
         }
 
-        // =====================================================
-        // SPLIT SPACES
-        // Only trigger on landing
-        // =====================================================
-
-        if (!isFinalSpace) {
-
-            // =====================================================
-            // SPLIT SPACES
-            // Trigger immediately when reached
-            // =====================================================
-
-            switch (space.getSpaceType()) {
-
-                case "Split":
-
-                    board.stopAnimation();
-
-                    Platform.runLater(() ->
-                            handleCareerSplit(
-                                    player,
-                                    token,
-                                    space,
-                                    remainingSteps
-                            ));
-
-                    return;
-
-                case "Split1":
-
-                    board.stopAnimation();
-
-                    Platform.runLater(() ->
-                            handleGenericSplit(
-                                    player,
-                                    token,
-                                    space,
-                                    remainingSteps
-                            ));
-
-                    return;
-            }
-        }
+//         =====================================================
+//         SPLIT SPACES
+//         Only trigger on landing
+//         =====================================================
+//
+//        if (!isFinalSpace) {
+//
+//            // =====================================================
+//            // SPLIT SPACES
+//            // Trigger immediately when reached
+//            // =====================================================
+//
+//            switch (space.getSpaceType()) {
+//
+//                case "Split":
+//
+//                    board.stopAnimation();
+//
+//                    Platform.runLater(() ->
+//                            handleCareerSplit(
+//                                    player,
+//                                    token,
+//                                    space,
+//                                    remainingSteps
+//                            ));
+//
+//                    return;
+//
+//                case "Split1":
+//
+//                    board.stopAnimation();
+//
+//                    Platform.runLater(() ->
+//                            handleGenericSplit(
+//                                    player,
+//                                    token,
+//                                    space,
+//                                    remainingSteps
+//                            ));
+//
+//                    return;
+//            }
+//        }
 
         // =====================================================
         // PASS EVENTS
@@ -151,6 +151,50 @@ public class MovementController {
                 return;
             }
 
+//          =====================================================
+//            SPLIT SPACES
+//            Only trigger on landing
+//         =====================================================
+
+            if (!isFinalSpace) {
+
+                // =====================================================
+                // SPLIT SPACES
+                // Trigger immediately when reached
+                // =====================================================
+
+                switch (space.getSpaceType()) {
+
+                    case "Split":
+
+                        board.stopAnimation();
+
+                        Platform.runLater(() ->
+                                handleCareerSplit(
+                                        player,
+                                        token,
+                                        space,
+                                        remainingSteps
+                                ));
+
+                        return;
+
+                    case "Split1":
+
+                        board.stopAnimation();
+
+                        Platform.runLater(() ->
+                                handleGenericSplit(
+                                        player,
+                                        token,
+                                        space,
+                                        remainingSteps
+                                ));
+
+                        return;
+                }
+            }
+
             // -------------------------------------------------
             // NORMAL PASS PROCESSING
             // -------------------------------------------------
@@ -175,14 +219,62 @@ public class MovementController {
         BoardSpace landed =
                 board.getSpace(token.getCurrentIndex());
 
-        callback.processStep(player, landed, true);
+        // =====================================================
+        // INTERACTIVE WHITE SPACE
+        // Let popup/decision control turn ending
+        // =====================================================
 
-//        callback.flushPending(player);
+        if (isInteractiveWhite(landed)) {
+
+            Platform.runLater(() -> {
+
+                callback.processStep(
+                        player,
+                        landed,
+                        true
+                );
+
+                callback.finishTurn();
+            });
+
+            return;
+        }
+
+        // =====================================================
+        // LANDING ON SPLIT
+        // Process action FIRST, then wait for next turn
+        // =====================================================
+
+        if ("Split".equalsIgnoreCase(landed.getSpaceType())
+                || "Split1".equalsIgnoreCase(landed.getSpaceType())) {
+
+            callback.processStep(
+                    player,
+                    landed,
+                    true
+            );
+
+            player.setWaitingForSplitChoice(true);
+
+            callback.finishTurn();
+
+            return;
+        }
+
+        // =====================================================
+        // NORMAL LANDING
+        // =====================================================
+
+        callback.processStep(
+                player,
+                landed,
+                true
+        );
 
         callback.finishTurn();
     }
 
-    private void handleCareerSplit(
+    public void handleCareerSplit(
             Player player,
             PlayerToken token,
             BoardSpace space,
@@ -235,7 +327,7 @@ public class MovementController {
         );
     }
 
-    private void handleGenericSplit(
+    public void handleGenericSplit(
             Player player,
             PlayerToken token,
             BoardSpace splitSpace,
@@ -258,10 +350,10 @@ public class MovementController {
         // --------------------------------------------------
 
         int preview1 =
-                moveForward(path1Start, remainingSteps);
+                moveForward(path1Start, remainingSteps - 1);
 
         int preview2 =
-                moveForward(path2Start, remainingSteps);
+                moveForward(path2Start, remainingSteps - 1);
 
         BoardSpace space1 =
                 board.getSpace(preview1);
@@ -288,9 +380,15 @@ public class MovementController {
 
             token.setCurrentIndex(chosenPathStart);
 
-            move(
+//            move(
+//                    player,
+//                    token,
+//                    remainingSteps
+//            );
+            continueAfterSplit(
                     player,
                     token,
+                    chosenPathStart,
                     remainingSteps
             );
 
@@ -332,9 +430,10 @@ public class MovementController {
 
         token.setCurrentIndex(chosenPathStart);
 
-        move(
+        continueAfterSplit(
                 player,
                 token,
+                chosenPathStart,
                 remainingSteps
         );
     }
@@ -401,18 +500,13 @@ public class MovementController {
             int remainingSteps
     ) {
 
-        token.setCurrentIndex(nextIndex);
+        token.setForcedNextIndex(nextIndex);
 
-        BoardSpace next = board.getSpace(nextIndex);
-
-        token.getNode().setLayoutX(next.getX());
-        token.getNode().setLayoutY(next.getY());
-
-        if (remainingSteps > 0) {
-            move(player, token, remainingSteps);
-        } else {
-            handleLanding(player, token);
-        }
+        move(
+                player,
+                token,
+                remainingSteps
+        );
     }
 
     private int findNextByType(

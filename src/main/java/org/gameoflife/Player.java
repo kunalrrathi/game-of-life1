@@ -39,6 +39,8 @@ public class Player {
 
     private int skipTurns = 0;
 
+    private boolean waitingForSplitChoice = false;
+
     public void setProfession(Profession profession) {
         this.profession = profession;
         this.salary = profession.getSalary();
@@ -325,5 +327,13 @@ public class Player {
 
     public Color getColor() {
         return (Color) token.getFill();
+    }
+
+    public boolean isWaitingForSplitChoice() {
+        return waitingForSplitChoice;
+    }
+
+    public void setWaitingForSplitChoice(boolean waitingForSplitChoice) {
+        this.waitingForSplitChoice = waitingForSplitChoice;
     }
 }
