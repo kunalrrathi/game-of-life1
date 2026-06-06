@@ -22,25 +22,22 @@ public class MainGameLayout {
         // CENTER SECTION
         // =====================================================
 
-        HBox centerSection = new HBox(20);
+        BorderPane rightPanel = new BorderPane();
+        rightPanel.setPrefWidth(450);
 
-        centerSection.setPadding(new Insets(10));
+        rightPanel.setCenter(playerPanel);
+        rightPanel.setBottom(logPanel);
 
-        // Board grows naturally
+        HBox mainContent = new HBox(20);
+
         HBox.setHgrow(boardView, Priority.ALWAYS);
 
-        centerSection.getChildren().addAll(
+        mainContent.getChildren().addAll(
                 boardView,
-                playerPanel
+                rightPanel
         );
 
-        // =====================================================
-        // ROOT LAYOUT
-        // =====================================================
-
-        root.setCenter(centerSection);
-
-        root.setBottom(logPanel);
+        root.setCenter(mainContent);
     }
 
     public BorderPane getRoot() {

@@ -21,6 +21,8 @@ public class BoardCoordinateCollector extends Application {
                 new Image(getClass().getResource("/org/gameoflife/life_board.jpg").toExternalForm())
         );
 
+        boardPane.setStyle("-fx-border-color: red;");
+
         // Fix board size so coordinates remain stable
         boardImage.setFitWidth(1400);
         boardImage.setFitHeight(980);

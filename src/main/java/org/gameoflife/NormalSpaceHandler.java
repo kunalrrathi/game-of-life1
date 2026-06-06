@@ -121,7 +121,7 @@ public class NormalSpaceHandler {
             case "Collect-Spin-3": //If you spin 3 collect $3000
             case "Collect-Spin-8": //If you spin 3 collect $8000
             case "Collect-Spin-the-Wheel":
-                System.out.println("Spin reward logic pending...");
+                handleSpinReward(player, action);
                 break;
 
             case "Lucky-Day":
@@ -385,6 +385,82 @@ public class NormalSpaceHandler {
             dashboard.refresh(players);
 
             finishLuckyDay();
+        });
+    }
+
+    private void handleSpinReward(
+            Player player,
+            String action
+    ) {
+
+        onDecisionStart.run();
+
+        spinnerController.spin(result -> {
+
+            int reward = 0;
+
+            switch (action) {
+
+                case "Collect-Spin-3":
+
+                    if (result == 3) {
+                        reward = 3000;
+                        logPanel.log(
+                                player.getName()
+                                        + " gets a bonus spin! Spin 3 to win ₹3000.",
+                                EVENT
+                        );
+                    }
+
+                    break;
+
+                case "Collect-Spin-8":
+
+                    if (result == 8) {
+                        reward = 8000;
+                        logPanel.log(
+                                player.getName()
+                                        + " gets a bonus spin! Spin 8 to win ₹8000.",
+                                EVENT
+                        );
+                    }
+
+                    break;
+
+                case "Collect-Spin-the-Wheel":
+
+                    reward = result * 1000;
+
+                    break;
+            }
+
+            if (reward > 0) {
+
+                player.collect(reward);
+
+                logPanel.log(
+                        player.getName()
+                                + " spun "
+                                + result
+                                + " and collected ₹"
+                                + reward,
+                        COLLECT
+                );
+
+            } else {
+
+                logPanel.log(
+                        player.getName()
+                                + " spun "
+                                + result
+                                + " and won nothing.",
+                        INFO
+                );
+            }
+
+            dashboard.refresh(players);
+
+            onDecisionEnd.run();
         });
     }
 
